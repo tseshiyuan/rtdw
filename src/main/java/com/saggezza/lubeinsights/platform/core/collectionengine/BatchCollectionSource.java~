@@ -1,0 +1,124 @@
+package com.saggezza.lubeinsights.platform.core.collectionengine;
+
+/**
+ * Created by chiyao on 8/25/14.
+ */
+
+import com.saggezza.lubeinsights.platform.core.serviceutil.ServiceConfig;
+
+import java.lang.RuntimeException;
+import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+
+import kafka.consumer.Consumer;
+import kafka.consumer.ConsumerConfig;
+import kafka.consumer.ConsumerIterator;
+import kafka.consumer.KafkaStream;
+import kafka.javaapi.consumer.ConsumerConnector;
+import kafka.admin.AdminUtils;
+import org.apache.log4j.Logger;
+import org.I0Itec.zkclient.ZkClient;
+
+/**
+ * A BatchCollectionSource represents a source of data batch
+ * It is represented by a KAFKA topic with a data scope
+ */
+public class BatchCollectionSource implements AutoCloseable {
+
+    public static final Logger logger = Logger.getLogger(BatchCollectionSource.class);
+    public static final ServiceConfig config = ServiceConfig.load();
+    public static final String EOB = "EndOfBatch";
+
+
+    // kafka property
+    public static final String zk = config.get("zookeeper"); // set up Kafka zookeeper to use the same one as platform services
+    public static final ZKClient zkClient = new ZkClient(zk); // todo: timeout?  connectionTimeout = Integer.MAX_VALUE
+    protected ConsumerConnector kafkaConsumer;
+    protected ExecutorService executor;
+    protected String desc;
+    protected LinkedBlockingQueue<String> dataQueue;
+
+
+    public BatchCollectionSource(String desc) {
+        this.desc = desc;
+    }
+
+    /**
+     * close or shutdown this CollectionSource
+     */
+    public final void close() {
+        if (kafkaConsumer != null) {  // TODO: check status
+            kafkaConsumer.shutdown();
+        }
+        if (executor != null) {
+            executor.shutdown();
+        }
+    }
+
+    private static ConsumerConfig createConsumerConfig(String zookeeper, String groupId) {
+        Properties props = new Properties();
+        props.put("zookeeper.connect", zookeeper);  // TODO: check property file
+        props.put("group.id", groupId);
+        props.put("zookeeper.session.timeout.ms", "400");
+        props.put("zookeeper.sync.time.ms", "200");
+        props.put("auto.commit.interval.ms", "1000");
+        return new ConsumerConfig(props);
+    }
+
+    public void run(String batchId) {
+        String topic = desc+"."+batchId; // each batch maps to a topic
+        Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
+        topicCountMap.put(topic, new Integer(1));
+        Map<String, List<KafkaStream<byte[], byte[]>>> consumerMap = kafkaConsumer.createMessageStreams(topicCountMap);
+        List<KafkaStream<byte[], byte[]>> streams = consumerMap.get(topic);
+        // set up only 1 stream
+        if (streams == null) {
+            return;
+        }
+        KafkaStream stream = streams.get(0);
+        executor = Executors.newFixedThreadPool(1);
+        Runnable job = new Runnable() {
+            public void run() {
+                ConsumerIterator<byte[], byte[]> it = stream.iterator();
+                while (it.hasNext()) {
+                    dataQueue.offer(new String(it.next().message())); // non-blocking insert
+                }
+            }
+        };
+        executor.submit(job);
+    }
+
+    /**
+     * controlled by CollectionEngine
+     * usually called whenever EOB is read
+     */
+    public void commit() {
+        kafkaConsumer.commitOffsets();
+    }
+
+    /**
+     * Get a batch of data in form of LinkedBlockingQueue
+     * by getting from the topic <desc>.<batchId>
+     * @param batchId
+     * @return  LinkedBlockingQueue whose content ends of EOB
+     */
+    public final LinkedBlockingQueue<String> getBatch(String batchId) {
+        // check if topic exists
+        if (!AdminUtils.topicExists(zkClient, topic)) {
+            throw new RuntimeException("Batch "+ batchId+ " for source "+desc+" doesn't exist");
+        }
+
+        // start the consumer if not started yet
+        if (kafkaConsumer == null) {
+            kafkaConsumer = Consumer.createJavaConsumerConnector(createConsumerConfig(zk, "DEFAULT_GROUP")); // just use one group for now
+            if (dataQueue==null) {
+                dataQueue = new LinkedBlockingQueue<String>();
+            }
+            run(batchId);
+        }
+        return dataQueue;
+    }
+
+}
