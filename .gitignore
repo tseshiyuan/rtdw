@@ -1,0 +1,11 @@
+.idea*
+*.iml
+out
+run
+target
+LICENSE
+META-INF
+NOTICE
+*~
+.DS_Store
+
