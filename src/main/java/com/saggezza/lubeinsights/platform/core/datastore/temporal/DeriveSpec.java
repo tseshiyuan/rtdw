@@ -1,6 +1,7 @@
-package com.saggezza.lubeinsights.platform.core.datastore;
+package com.saggezza.lubeinsights.platform.core.datastore.temporal;
 
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataElement;
+import com.saggezza.lubeinsights.platform.core.common.datamodel.DataModel;
 import com.saggezza.lubeinsights.platform.core.common.datamodel.DataType;
 
 import java.util.ArrayList;
@@ -102,5 +103,19 @@ public class DeriveSpec {
     public final Object[][] getDerivedAggFieldAddress() {
         return derivedAggFieldAddress;
     }
+
+
+
+    /**
+     * needed to define a derived store
+     * before this is done, we rely on human input
+     * @param dataModel
+     * @return
+     */
+    public final DataModel getDerivedDataModel(DataModel dataModel) {
+        // TODO
+        return null;
+    }
+
 
 }

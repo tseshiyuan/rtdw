@@ -1,6 +1,9 @@
-package com.saggezza.lubeinsights.platform.core.datastore;
+package com.saggezza.lubeinsights.platform.core.datastore.temporal;
 
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataElement;
+import com.saggezza.lubeinsights.platform.core.datastore.StorageEngineClient;
+import com.saggezza.lubeinsights.platform.core.datastore.temporal.ByteArray;
+import com.saggezza.lubeinsights.platform.core.datastore.temporal.CacheStore;
 
 import java.io.IOException;
 import java.util.Map;

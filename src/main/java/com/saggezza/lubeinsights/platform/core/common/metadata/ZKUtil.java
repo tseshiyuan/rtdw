@@ -4,6 +4,8 @@ import com.saggezza.lubeinsights.platform.core.serviceutil.ServiceConfig;
 import org.apache.log4j.Logger;
 import org.apache.zookeeper.*;
 
+import java.util.List;
+
 /**
  * Created by chiyao on 8/7/14.
  */
@@ -53,6 +55,26 @@ public class ZKUtil {
         zk.create(path, data, ZooDefs.Ids.OPEN_ACL_UNSAFE, CreateMode.PERSISTENT);
     }
 
+    /**
+     * remove the zk node under path with any version
+     * @param path
+     * @throws KeeperException
+     * @throws InterruptedException
+     */
+    public static final void zkRemove(String path) throws KeeperException, InterruptedException {
+        zk.delete(path, -1); // -1 matching any version
+    }
+
+    /**
+     * get all child names of the given path (without using watch)
+     * @param path
+     * @return list of child names
+     * @throws KeeperException
+     * @throws InterruptedException
+     */
+    public static final List<String> getChildren(String path) throws KeeperException, InterruptedException {
+        return zk.getChildren(path,false);
+    }
 
     /**
      * set a node at the path with data

@@ -1,4 +1,4 @@
-package com.saggezza.lubeinsights.platform.core.datastore;
+package com.saggezza.lubeinsights.platform.core.datastore.temporal;
 
 import com.google.common.primitives.UnsignedInteger;
 

@@ -1,11 +1,14 @@
-package com.saggezza.lubeinsights.platform.core.datastore;
+package com.saggezza.lubeinsights.platform.core.datastore.temporal;
 
 /**
  * Created by chiyao on 9/18/14.
  */
 
+import com.saggezza.lubeinsights.platform.core.common.GsonUtil;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataElement;
-import com.saggezza.lubeinsights.platform.core.serviceutil.ServiceConfig;
+import com.saggezza.lubeinsights.platform.core.common.datamodel.DataModel;
+import com.saggezza.lubeinsights.platform.core.datastore.DataStore;
+import com.saggezza.lubeinsights.platform.core.datastore.StorageEngine;
 
 import java.util.HashMap;
 import java.util.function.Function;
@@ -16,27 +19,19 @@ import java.util.function.Function;
  * New data arrives with a monotonic key (i.e. value increases in arrival order)
  * It is defined by a data model and a schema specifying how to represent the data model in storage engine.
  */
-public class TemporalStore {
+public class TemporalStore extends DataStore {
 
-    private static ServiceConfig config;
-    private static StorageEngine storageEngine = null;
-
-    private String name;
+    private HashMap<String,DeriveSpec> derivedInfo = null;
     // specify how to transform a data element to who
-    private HashMap<TemporalStore, Function<DataElement,DataElement>> derivedStores = new HashMap<TemporalStore, Function<DataElement,DataElement>>();
-    private CacheStore cacheStore;
+    private transient HashMap<TemporalStore, Function<DataElement,DataElement>> derivedStores = new HashMap<TemporalStore, Function<DataElement,DataElement>>();
+    private transient CacheStore cacheStore;
 
-    static {
-        config = ServiceConfig.load();
-        String engineSpec = config.get("storage-engine");
-        if (engineSpec != null) {
-            String[] typeLocation = engineSpec.split(",");
-            storageEngine = new StorageEngine(typeLocation[0].trim(),typeLocation[1].trim());
-        }
+    public TemporalStore(String name, DataModel dataModel, StorageEngine storageEngine) {
+        super(name,dataModel,storageEngine);
     }
 
-    private TemporalStore(String name, String windowName, Object[][] groupByKeyAddress, Object[][] aggFieldAddress) {
-        this.name = name;
+
+    private void setDerivedInfo(String windowName, Object[][] groupByKeyAddress, Object[][] aggFieldAddress) {
         // if no temporal key, then don't need a cache for aggregation
         if (windowName != null) {
             cacheStore = new CacheStore(this, windowName, groupByKeyAddress, aggFieldAddress);
@@ -53,24 +48,25 @@ public class TemporalStore {
         return (store instanceof TemporalStore) && name.equals(((TemporalStore)store).name);
     }
 
-    public final String getName() {return name;}
-
     /**
-     * derive a new temporal store with the grouping/filtering spec
-     * @param name
+     * derive a new temporal store with the grouping/filtering deriveSpec
      * @param deriveSpec
+     * @param newStore
      * @return
      */
-    public final TemporalStore derive(String name, DeriveSpec deriveSpec) {
-        // TODO: this need to be in persistent config (we can do it via DataStoreManager)
-        TemporalStore newStore = new TemporalStore(name,
+    public synchronized final void derive(DeriveSpec deriveSpec, TemporalStore newStore) {
+        // add newStore to my deriveInfo
+        if (derivedInfo == null) {
+            derivedInfo = new HashMap<String,DeriveSpec>();
+        }
+        derivedInfo.put(newStore.name, deriveSpec);
+        // set up new store
+        newStore.setDerivedInfo(
                 deriveSpec.getDerivedTemporalKeyName(),
                 deriveSpec.getDerivedGroupByKeyAddress(),
                 deriveSpec.getDerivedAggFieldAddress());
         derivedStores.put(newStore, deriveSpec.getDataElementTransformer());
-        return newStore;
-    }
-
+   }
 
     /**
      * add a data element to this, and also to all derived stores after transforming it
@@ -87,10 +83,10 @@ public class TemporalStore {
         }
     }
 
-    /**
-     * @return storage engine of this temporal store
-     */
-    public final StorageEngine getStorageEngine() {return storageEngine;}
 
+    public final String toJson() {return GsonUtil.gson().toJson(this);} // TODO: make sure it serializes super
 
+    public final void close() {
+        // TODO
+    }
 }
