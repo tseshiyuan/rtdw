@@ -1,4 +1,4 @@
-package com.saggezza.lubeinsights.platform.core.datastore.temporal;
+package com.saggezza.lubeinsights.platform.core.datastore;
 
 /**
  * Created by chiyao on 9/18/14.
@@ -6,10 +6,10 @@ package com.saggezza.lubeinsights.platform.core.datastore.temporal;
 
 import com.saggezza.lubeinsights.platform.core.common.GsonUtil;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataElement;
+import com.saggezza.lubeinsights.platform.core.common.dataaccess.FieldAddress;
 import com.saggezza.lubeinsights.platform.core.common.datamodel.DataModel;
-import com.saggezza.lubeinsights.platform.core.datastore.DataStore;
-import com.saggezza.lubeinsights.platform.core.datastore.StorageEngine;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.function.Function;
 
@@ -21,17 +21,24 @@ import java.util.function.Function;
  */
 public class TemporalStore extends DataStore {
 
-    private HashMap<String,DeriveSpec> derivedInfo = null;
-    // specify how to transform a data element to who
-    private transient HashMap<TemporalStore, Function<DataElement,DataElement>> derivedStores = new HashMap<TemporalStore, Function<DataElement,DataElement>>();
-    private transient CacheStore cacheStore;
+    // specify who derives from me (This is the serialized representation when persisted)
+    private HashMap<String,DeriveSpec> derivers = null;
+    // specify how to transform a data element to who (This is determined by derivers)
+    private transient HashMap<TemporalStore, Function<DataElement,DataElement>> derivedStores = null;
+    private transient CacheStore cacheStore = null;
 
     public TemporalStore(String name, DataModel dataModel, StorageEngine storageEngine) {
         super(name,dataModel,storageEngine);
     }
 
 
-    private void setDerivedInfo(String windowName, Object[][] groupByKeyAddress, Object[][] aggFieldAddress) {
+    /**
+     * This is a derived store, so we keep all the derived info here
+     * @param windowName
+     * @param groupByKeyAddress
+     * @param aggFieldAddress
+     */
+    private void setDerivedInfo(String windowName, FieldAddress[] groupByKeyAddress, String[] aggFieldAddress) {
         // if no temporal key, then don't need a cache for aggregation
         if (windowName != null) {
             cacheStore = new CacheStore(this, windowName, groupByKeyAddress, aggFieldAddress);
@@ -55,16 +62,19 @@ public class TemporalStore extends DataStore {
      * @return
      */
     public synchronized final void derive(DeriveSpec deriveSpec, TemporalStore newStore) {
-        // add newStore to my deriveInfo
-        if (derivedInfo == null) {
-            derivedInfo = new HashMap<String,DeriveSpec>();
+        // add newStore to my derivers
+        if (derivers == null) {
+            derivers = new HashMap<String,DeriveSpec>();
         }
-        derivedInfo.put(newStore.name, deriveSpec);
+        derivers.put(newStore.name, deriveSpec);
         // set up new store
         newStore.setDerivedInfo(
                 deriveSpec.getDerivedTemporalKeyName(),
                 deriveSpec.getDerivedGroupByKeyAddress(),
-                deriveSpec.getDerivedAggFieldAddress());
+                deriveSpec.getAggFieldAlias());
+        if (derivedStores == null) {
+            derivedStores = new HashMap<TemporalStore, Function<DataElement,DataElement>>();
+        }
         derivedStores.put(newStore, deriveSpec.getDataElementTransformer());
    }
 
@@ -73,20 +83,34 @@ public class TemporalStore extends DataStore {
      * @param dataElement
      */
     public void addDataElement(DataElement dataElement) {
+        System.out.println(name+ " receives "+ dataElement.toString());
         // add to my cache store
         if (cacheStore != null) {
-            cacheStore.add(dataElement);
+            if (dataElement == DataElement.EMPTY) { // EOB, signal to flush
+                cacheStore.flushRequest();
+            }
+            else {
+                cacheStore.add(dataElement);
+            }
         }
         // then add to all derived stores
-        for (TemporalStore store: derivedStores.keySet()) {
-            store.addDataElement(derivedStores.get(store).apply(dataElement));
+        if (derivedStores != null) {
+            for (TemporalStore store : derivedStores.keySet()) {
+                // transform the element only if it's not empty
+                DataElement newElt = (dataElement == DataElement.EMPTY ? dataElement : derivedStores.get(store).apply(dataElement));
+                if (newElt != null) { // not filtered out
+                    store.addDataElement(newElt);
+                }
+            }
         }
     }
 
 
     public final String toJson() {return GsonUtil.gson().toJson(this);} // TODO: make sure it serializes super
 
-    public final void close() {
-        // TODO
+    public final void close()  throws IOException {
+        if (cacheStore != null) {
+            cacheStore.close();
+        }
     }
 }

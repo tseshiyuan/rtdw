@@ -1,6 +1,7 @@
 package com.saggezza.lubeinsights.platform.core.datastore;
 
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataElement;
+import com.saggezza.lubeinsights.platform.core.common.dataaccess.FieldAddress;
 import com.saggezza.lubeinsights.platform.core.serviceutil.ResourceManager;
 
 import java.io.BufferedWriter;
@@ -15,6 +16,8 @@ public class StorageEngine {
 
     private String type;
     private String address;
+    private StorageEngineClient client = null;
+
     public StorageEngine(String type,String address) {
         this.type = type;
         this.address=address;
@@ -28,20 +31,20 @@ public class StorageEngine {
      * @param aggFieldAddress
      * @return a corresponding storage engine client based on type, or null if unknown type
      */
-    public StorageEngineClient getStorageEngineClient(String temporalStoreName, String windowName, Object[][] groupByKeyAddress, Object[][] aggFieldAddress) {
+    public StorageEngineClient getStorageEngineClient(String temporalStoreName, String windowName, FieldAddress[] groupByKeyAddress, String[] aggFieldAddress) {
 
+        StorageEngineClient client = null;
         if (type.equalsIgnoreCase("hbase")) {
-            return getHBaseClient(temporalStoreName, windowName, groupByKeyAddress, aggFieldAddress);
+            client = getHBaseClient(temporalStoreName, windowName, groupByKeyAddress, aggFieldAddress);
         }
         else if (type.equalsIgnoreCase("file")) {
-            return getFileClient(temporalStoreName, windowName, groupByKeyAddress, aggFieldAddress);
+            client = getFileClient(temporalStoreName, windowName, groupByKeyAddress, aggFieldAddress);
         }
         else if (type.equalsIgnoreCase("sql")) {
-            return getSqlClient(temporalStoreName, windowName, groupByKeyAddress, aggFieldAddress);
+            client = getSqlClient(temporalStoreName, windowName, groupByKeyAddress, aggFieldAddress);
         }
-        else {
-            return null; // unknown type
-        }
+        this.client  = client;
+        return client;
     }
 
     /**
@@ -52,7 +55,8 @@ public class StorageEngine {
      * @param aggFieldAddress           column family (stats names are columns/qualifiers)
      * @return a HBase StorageEngineClient
      */
-    private StorageEngineClient getHBaseClient(String temporalStoreName, String windowName, Object[][] groupByKeyAddress, Object[][] aggFieldAddress) {
+    private StorageEngineClient getHBaseClient(String temporalStoreName, String windowName, FieldAddress[] groupByKeyAddress, String[] aggFieldAddress) {
+        // This leads to HBase table = temporalStoreName, rowKey = <windowName,groupByKey values>,  column = <count,min,max,sum,sqsum>
         return null;
     }
 
@@ -64,7 +68,7 @@ public class StorageEngine {
      * @param aggFieldAddress          following fields
      * @return a file StorageEngineClient
      */
-    private StorageEngineClient getFileClient(String temporalStoreName, String windowName, Object[][] groupByKeyAddress, Object[][] aggFieldAddress) {
+    private StorageEngineClient getFileClient(String temporalStoreName, String windowName, FieldAddress[] groupByKeyAddress, String[] aggFieldAddress) {
 
         File temporalStoreFile = new File(ResourceManager.allocateFile(temporalStoreName));
         // File temporalStoreFile = new File(address,temporalStoreName);
@@ -74,18 +78,21 @@ public class StorageEngine {
             protected BufferedWriter output = null;
 
             public final boolean isOpen() {
-                return output == null;
+                return output != null;
             }
 
             public void open() throws IOException {
+                System.out.println("open client");
                 if (output==null) {
                     output = new BufferedWriter(new FileWriter(temporalStoreFile));
                 }
             }
 
             public void close() throws IOException {
+                System.out.println("Close client");
                 if (output != null) {
                     output.close();
+                    output = null;
                 }
             }
 
@@ -95,6 +102,7 @@ public class StorageEngine {
              * @throws IOException
              */
             public void aggsert(DataElement element) throws IOException {
+                System.out.println("aggsert "+element.toString());
                 output.write(element.toString());
                 output.newLine();
             }
@@ -112,7 +120,7 @@ public class StorageEngine {
      * @param aggFieldAddress          following fields
      * @return a sql StorageEngineClient
      */
-    private StorageEngineClient getSqlClient(String temporalStoreName, String windowName, Object[][] groupByKeyAddress, Object[][] aggFieldAddress) {
+    private StorageEngineClient getSqlClient(String temporalStoreName, String windowName, FieldAddress[] groupByKeyAddress, String[] aggFieldAddress) {
         return null;
     }
 

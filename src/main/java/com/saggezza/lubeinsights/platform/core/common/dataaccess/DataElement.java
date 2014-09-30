@@ -20,6 +20,7 @@ import java.util.*;
  */
 public class DataElement implements Serializable {
 
+    public static final DataElement EMPTY = new DataElement(); // matches no data element type
     protected DataType dataType = null;    // primitive types: TEXT, NUMBER and DATETIME
     protected Object value = null;         // primitive values of type String, Number or DateTime
     protected ArrayList<DataElement> list = null;     // available only when this DataElement is a list
@@ -35,6 +36,13 @@ public class DataElement implements Serializable {
     public DataElement(DataType dataType, Object value) {
         this.dataType = dataType;
         this.value = value;
+    }
+
+    /**
+     * empty data element
+     */
+    private DataElement() {
+        // everything null. This is an Empty DataElement
     }
 
     /**
@@ -75,7 +83,7 @@ public class DataElement implements Serializable {
         return selection.from(this);
     }
 
-    public DataElement(HashMap<String,DataElement> map) {
+    public DataElement(TreeMap<String,DataElement> map) {
         TreeMap<String, DataElement> treeMap =  new TreeMap<>();
         treeMap.putAll(map);
         this.map = treeMap;
@@ -91,9 +99,7 @@ public class DataElement implements Serializable {
     /**
      * @return a map of String to DataElement, or null if it's not a map
      */
-    public final HashMap<String,DataElement> asMap() {
-        HashMap<String, DataElement> map = new HashMap<>();
-        map.putAll(this.map);
+    public final Map<String,DataElement> asMap() {
         return map;
     }
 
@@ -140,79 +146,45 @@ public class DataElement implements Serializable {
         }
     }
 
-    /**
-     * generate coordinates for a list of addresses
-     * @param address comma separated coordinates, each coordinate is a dot separated value
-     *        address is like user.phoneNumber[0].areaCode,product.serialNum
-     *        or in case of flat record, it can be userId,productId,serialNum
-     * @return [[user,phoneNumber,0,areaCode],[product,serialNum] in case 1
-     *        or [[userId],[productId],[serialNum]] in case 2
-     */
-    public static final Object[][] generateCoordinates(String address) {
-        String[] addresses = address.split(",");
-        Object[][] result = new Object[addresses.length][];
-        for (int i=0; i<addresses.length; i++) {  // transform each address to coordinate of form Object[]
-            String[] parts = address.split(".");
-            ArrayList coordinates = new ArrayList();
-            for (String part : parts) {
-                if (part.endsWith("]")) { // it is list access like A[n]
-                    int bracketPos = part.indexOf('[');
-                    if (bracketPos > 0) {
-                        coordinates.add(part.substring(0, bracketPos));
-                    }
-                    coordinates.add(Integer.valueOf(part.substring(bracketPos + 1, part.length() - 1)));
-                } else {  // it's map access
-                    coordinates.add(part);
-                }
-            }
-            result[i] = coordinates.toArray();
-        }
-        return result;
-    }
-
-    /**
-     * universal field retriever using an address, which is a string representation of coordinates
-     * @param address
-     */
-    public final DataElement get(String address) {
-        return get(generateCoordinates(address),0);
-    }
 
     /**
      * universal field retriever using coordinates. Each coordinate is either a string key or a integer index
-     * @param coordinates
+     * @param fieldAddress
      */
-    public final DataElement get(Object[] coordinates) {
-        return get(coordinates,0);
+    public final DataElement getField(FieldAddress fieldAddress) {
+        return get(fieldAddress.getCoordinate(),0);
     }
 
     /**
      * recursively access a field using the coordinates starting from startPos
-     * @param coordinates
+     * @param coordinate
      * @param startPos
      * @return the data element at the coordinates starting from startPos
      */
-    private final DataElement get(Object[] coordinates, int startPos) {
-        if (startPos == coordinates.length) {
+    private final DataElement get(Object[] coordinate, int startPos) {
+        if (startPos == coordinate.length) {
             return this;
         }
-        else if (coordinates[startPos] instanceof Integer) {
-            return list.get((Integer)coordinates[startPos]).get(coordinates,startPos+1);
+        else if (coordinate[startPos] instanceof Integer) {
+            return list.get((Integer)coordinate[startPos]).get(coordinate,startPos+1);
         }
         else {
-            return map.get((String)coordinates[startPos]).get(coordinates,startPos+1);
+            return map.get((String)coordinate[startPos]).get(coordinate,startPos+1);
         }
     }
 
     /**
-     * get an array of fields bases on an array of addresses
+     * get an array of field values based on an array of addresses
      * @param addresses
      * @return
      */
-    public DataElement[] getElements(Object[][] addresses) {
+    public DataElement[] getFields(FieldAddress[] addresses) {
+        if (addresses == null) {
+            return null;
+        }
         DataElement[] result = new DataElement[addresses.length];
         for (int i=0; i<addresses.length; i++) {
-            result[i] = get(addresses[i]);
+            result[i] = getField(addresses[i]);
         }
         return result;
     }
@@ -233,11 +205,11 @@ public class DataElement implements Serializable {
             return new DataElement(al);
         }
         if (map != null) { // it's a map
-            HashMap<String,DataElement> hm = new HashMap<String,DataElement>();
+            TreeMap<String,DataElement> tm = new TreeMap<String,DataElement>();
             for (String k: map.keySet()) {
-                hm.put(k, map.get(k).clone());
+                tm.put(k, map.get(k).clone());
             }
-            return new DataElement(hm);
+            return new DataElement(tm);
         }
         return null; // can't clone unknown type
     }
@@ -264,7 +236,7 @@ public class DataElement implements Serializable {
      */
     public final void addValue(float value) {
         if (dataType == DataType.NUMBER) {
-            this.value = (float) this.value + value;
+            this.value = (Float) this.value + value;
         }
         // else no-op
     }
@@ -274,6 +246,9 @@ public class DataElement implements Serializable {
      * @return a short representation of this data element (without type tag, comma delimited)
      */
     public final String toString() {
+        if (this == DataElement.EMPTY) {
+            return "EMPTY";
+        }
         if(dataType != null) {
             switch (dataType) {
                 case TEXT:
@@ -340,7 +315,7 @@ public class DataElement implements Serializable {
     }
 
     /**
-     * applicable only to map dataaccess elements
+     * applicable only to map data elements
      * @param name
      * @param elt
      * @throws DataElementTypeError if it's not a map
@@ -420,7 +395,7 @@ public class DataElement implements Serializable {
             }
             return new DataElement(elems);
         }else if("map".equals(dataKey)){
-            HashMap<String, DataElement> map = new HashMap<>();
+            TreeMap<String, DataElement> map = new TreeMap<>();
             JsonObject vals = (JsonObject) valuePart;
             Set<Map.Entry<String, JsonElement>> entries = vals.entrySet();
             for(Map.Entry<String, JsonElement> each : entries){

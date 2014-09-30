@@ -26,11 +26,11 @@ public class ModuleFactory {
      * @param name
      * @return the module object for the given module name
      */
-    public static DataSetModule getModule(String moduleType, String name) {
+    public static <T> T getModule(String moduleType, String name) {
         try {
             // find the class of the given name and instantiate it
             String className = MODULE_HOME + "." + moduleType + "." + name;
-            return ((Class<DataSetModule>)Class.forName(className)).newInstance();
+            return (T) (Class.forName(className)).newInstance();
 
         } catch (Exception e) {
             logger.trace("Can't find or predicate class "+name, e);

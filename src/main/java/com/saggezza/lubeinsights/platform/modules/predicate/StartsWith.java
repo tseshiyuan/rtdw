@@ -27,3 +27,4 @@ public class StartsWith implements Predicate<DataElement> {
         return line.asText().startsWith(startsWith);
     }
 }
+

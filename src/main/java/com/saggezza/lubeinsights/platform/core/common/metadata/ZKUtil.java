@@ -28,7 +28,7 @@ public class ZKUtil {
                     System.out.println(event.toString());  // TODO: handle watched event
                 }
             };
-            zk = new ZooKeeper(zkAddr, 3000, watcher);
+            zk = new ZooKeeper(zkAddr, 300000, watcher);   // 300 sec
             zk.getData("/", false, null);//Sample test of connection
         } catch (Exception e) {
             zk = null;
@@ -73,7 +73,13 @@ public class ZKUtil {
      * @throws InterruptedException
      */
     public static final List<String> getChildren(String path) throws KeeperException, InterruptedException {
-        return zk.getChildren(path,false);
+        if (exists(path)) {
+            return zk.getChildren(path, false);
+        }
+        else {
+            zkCreate(path,"NA".getBytes());
+            return null;
+        }
     }
 
     /**

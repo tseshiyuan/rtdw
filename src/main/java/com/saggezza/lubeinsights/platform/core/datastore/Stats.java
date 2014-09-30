@@ -1,4 +1,4 @@
-package com.saggezza.lubeinsights.platform.core.datastore.temporal;
+package com.saggezza.lubeinsights.platform.core.datastore;
 
 /**
  * Created by chiyao on 9/19/14.

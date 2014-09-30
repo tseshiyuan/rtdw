@@ -61,7 +61,7 @@ public class LocalRun {
              }
             else { // e.g. Y = TestDataSetModule X
                 // data set handling logic is defined in modules
-                DataSetModule module = ModuleFactory.getModule("dataset",statement.commandName);
+                DataSetModule module = (DataSetModule) ModuleFactory.getModule("dataset",statement.commandName);
                 HashMap<String,String> params = statement.getParams();
 
                 DataRef inputDataSet = getVal(params.get("val"));

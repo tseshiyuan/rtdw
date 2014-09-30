@@ -1,4 +1,4 @@
-package com.saggezza.lubeinsights.platform.core.datastore.temporal;
+package com.saggezza.lubeinsights.platform.core.datastore;
 
 import java.util.Arrays;
 

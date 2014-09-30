@@ -6,23 +6,27 @@ package com.saggezza.lubeinsights.platform.core.common.datamodel;
 
 import com.google.gson.Gson;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataElement;
+import com.saggezza.lubeinsights.platform.core.common.dataaccess.FieldAddress;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.Selection;
 import com.saggezza.lubeinsights.platform.core.dataengine.DataEngineExecutionException;
 import com.saggezza.lubeinsights.platform.core.dataengine.ErrorCode;
+import com.saggezza.lubeinsights.platform.core.datastore.Stats;
 import com.saggezza.lubeinsights.platform.modules.datamodel.validator.ValidatorModule;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.TreeMap;
 import java.util.function.Function;
 
 /**
  * A DataModel object is a descriptor that describes a DataElement.
- * For example, how many fields does a record dataaccess element have? What are their dataaccess types and value constraints?
+ * For example, how many fields does a record data element have? What are their data types and value constraints?
  * Using this descriptor, an application can validate/process a given DataElement properly.
  */
 public class DataModel {
 
+    public static final DataModel statsDataModel = createStatsModel();
     protected DataType dataType = null;
     protected ArrayList<DataModel> descList = null;
     protected TreeMap<String,DataModel> descMap = null;
@@ -44,9 +48,8 @@ public class DataModel {
         initValidators();
     }
 
-    public DataModel(HashMap map) {
-        descMap = new TreeMap<>();
-        descMap.putAll(map);
+    public DataModel(TreeMap map) {
+        descMap = map;
         initValidators();
     }
 
@@ -65,10 +68,8 @@ public class DataModel {
 
 
     public final boolean isMap() {return descMap != null;}
-    public final HashMap<String,DataModel> getMap() {
-        HashMap<String, DataModel> ret = new HashMap<>();
-        ret.putAll(descMap);
-        return ret;
+    public final Map<String,DataModel> getMap() {
+        return descMap;
     }
 
 
@@ -132,7 +133,7 @@ public class DataModel {
             return true;
         }
         // if it's a map, validate its elements recursively
-        HashMap<String,DataElement> map = element.asMap();
+        Map<String,DataElement> map = element.asMap();
         if (map != null) {
             if (descMap==null) {
                 return false;
@@ -258,6 +259,46 @@ public class DataModel {
             }
         }
     }
+
+    /**
+     * a model holding 5 stats numbers
+     * @return
+     */
+    private static final DataModel createStatsModel() {
+        ArrayList<DataModel> al = new ArrayList<DataModel>();
+        for (Stats s:Stats.values()) {
+            al.add(new DataModel(DataType.NUMBER));
+        }
+        return new DataModel(al);
+    }
+
+
+    /**
+     * universal field retriever using coordinates. Each coordinate is either a string key or a integer index
+     * @param fieldAddress
+     */
+    public final DataModel getField(FieldAddress fieldAddress) {
+        return get(fieldAddress.getCoordinate(),0);
+    }
+
+    /**
+     * recursively access a field using the coordinates starting from startPos
+     * @param coordinate
+     * @param startPos
+     * @return the data element at the coordinates starting from startPos
+     */
+    private final DataModel get(Object[] coordinate, int startPos) {
+        if (startPos == coordinate.length) {
+            return this;
+        }
+        else if (coordinate[startPos] instanceof Integer) {
+            return descList.get((Integer)coordinate[startPos]).get(coordinate,startPos+1);
+        }
+        else {
+            return descMap.get((String)coordinate[startPos]).get(coordinate,startPos+1);
+        }
+    }
+
 
     public static final void main(String[] args) {
 

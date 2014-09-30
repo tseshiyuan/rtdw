@@ -116,7 +116,9 @@ public abstract class PlatformService {
     public void stop() throws Exception {
         System.out.println("Stopping service " + name);
         logger.warn("Stopping service " + name);
-        jettyServer.stop();
+        if (jettyServer != null) {
+            jettyServer.stop();
+        }
         System.out.println("jetty server done");
         ServiceCatalog.serviceOff(this.name);
         ZKUtil.close();

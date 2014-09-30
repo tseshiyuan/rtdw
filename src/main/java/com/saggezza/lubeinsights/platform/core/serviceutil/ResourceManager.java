@@ -7,7 +7,12 @@ public class ResourceManager {
     private static final String tempDir = ServiceConfig.load().get("tempDir");
 
     public static final String allocateFile(String label) {
-        return tempDir+label+"."+System.currentTimeMillis(); // TODO: check name collision due to timestamp ?
+        return new StringBuilder(tempDir)
+                    .append("/")
+                    .append(label)
+                    .append(".")
+                    .append(System.currentTimeMillis())
+                    .toString();
     }
 
 }

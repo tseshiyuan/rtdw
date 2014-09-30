@@ -9,6 +9,7 @@ import com.saggezza.lubeinsights.platform.core.common.GsonUtil;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.*;
 import com.saggezza.lubeinsights.platform.core.common.datamodel.DataModel;
 
+import java.io.IOException;
 import java.util.concurrent.Future;
 
 /**
@@ -52,7 +53,7 @@ public abstract class DataStore {
         return serializedDataStore.split("__");
     }
 
-    public abstract void close();
+    public abstract void close() throws IOException;
 
 
 
