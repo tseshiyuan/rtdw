@@ -2,14 +2,12 @@ package com.saggezza.lubeinsights.platform.core.collectionengine;
 
 import com.saggezza.lubeinsights.platform.core.collectionengine.kafka.KafkaUtil;
 import com.saggezza.lubeinsights.platform.core.common.Params;
-import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataChannel;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataElement;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataRef;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataRefType;
 import com.saggezza.lubeinsights.platform.core.common.datamodel.DataModel;
 import com.saggezza.lubeinsights.platform.core.common.modules.ModuleFactory;
 import com.saggezza.lubeinsights.platform.core.serviceutil.*;
-import com.saggezza.lubeinsights.platform.core.workflowengine.WorkFlow;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedWriter;
@@ -47,7 +45,7 @@ public class CollectionEngine  extends PlatformService {
         super(ServiceName.COLLECTION_ENGINE);
     }
 
-    public ServiceResponse processRequest(ServiceRequest request) {
+    public ServiceResponse processRequest(ServiceRequest request, String command) {
         try {
 
             logger.info("CollectionEngine processes request:\n" + request.toJson());
@@ -284,7 +282,7 @@ public class CollectionEngine  extends PlatformService {
                 );
         ServiceRequest request = new ServiceRequest(ServiceCommand.COLLECT_BATCH,params);
         CollectionEngine collectionEngine = new CollectionEngine();
-        ServiceResponse response = collectionEngine.processRequest(request);
+        ServiceResponse response = collectionEngine.processRequest(request, null);
         System.out.println("status: "+response.getStatus());
         System.out.println("message: "+response.getMessage());
         System.out.println("data: "+response.getData());

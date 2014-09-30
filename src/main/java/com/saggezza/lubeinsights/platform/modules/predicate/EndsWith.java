@@ -10,7 +10,7 @@ import com.saggezza.lubeinsights.platform.core.dataengine.module.Predicate;
  *
  * Checks if the input ends with a specific string.
  */
-public class EndsWith implements Predicate<DataElement> {
+public class EndsWith implements Predicate {
 
     private final String endsWith;
 

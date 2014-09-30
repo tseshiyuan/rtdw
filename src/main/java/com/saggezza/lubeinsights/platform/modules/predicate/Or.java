@@ -2,6 +2,7 @@ package com.saggezza.lubeinsights.platform.modules.predicate;
 
 import com.saggezza.lubeinsights.platform.core.common.Params;
 import com.saggezza.lubeinsights.platform.core.common.ConditionExpression;
+import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataElement;
 import com.saggezza.lubeinsights.platform.core.dataengine.module.Predicate;
 import com.saggezza.lubeinsights.platform.core.common.modules.Modules;
 
@@ -26,7 +27,7 @@ public class Or implements Predicate {
     }
 
     @Override
-    public boolean test(Object o) {
+    public boolean test(DataElement o) {
         return one.test(o) || two.test(o);
     }
 }

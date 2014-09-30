@@ -151,7 +151,7 @@ public class DataElement implements Serializable {
      * universal field retriever using coordinates. Each coordinate is either a string key or a integer index
      * @param fieldAddress
      */
-    public final DataElement getField(FieldAddress fieldAddress) {
+    public final DataElement get(FieldAddress fieldAddress) {
         return get(fieldAddress.getCoordinate(),0);
     }
 
@@ -184,7 +184,7 @@ public class DataElement implements Serializable {
         }
         DataElement[] result = new DataElement[addresses.length];
         for (int i=0; i<addresses.length; i++) {
-            result[i] = getField(addresses[i]);
+            result[i] = get(addresses[i]);
         }
         return result;
     }

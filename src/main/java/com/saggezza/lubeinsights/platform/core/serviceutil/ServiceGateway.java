@@ -38,6 +38,18 @@ public class ServiceGateway {
      */
     public ServiceResponse sendRequest(ServiceName serviceName, ServiceRequest request)
             throws InterruptedException, TimeoutException, ExecutionException, Exception {
+        return sendRequest(serviceName, request, null);
+    }
+
+
+    /**
+     * synchronous call to another service
+     * @param serviceName
+     * @param request
+     * @return
+     */
+    public ServiceResponse sendRequest(ServiceName serviceName, ServiceRequest request, String command)
+            throws InterruptedException, TimeoutException, ExecutionException, Exception {
 
         if (httpClient==null) {
             httpClient = new HttpClient();
@@ -60,7 +72,9 @@ public class ServiceGateway {
             exchange.setURI(uri);
             exchange.setRequestContentType("application/x-www-form-urlencoded;charset=utf-8");
             exchange.setMethod("POST");
-            exchange.setRequestContent(new ByteArrayBuffer("request="+ URLEncoder.encode(request.toJson(), "UTF-8")));
+            String content = (command == null ? "" : "command="+command+"&") +
+                    ("request=" + URLEncoder.encode(request.toJson(), "UTF-8"));
+            exchange.setRequestContent(new ByteArrayBuffer(content));
             httpClient.send(exchange);
             int status = exchange.waitForDone();
             String responseContent = exchange.getResponseContent();

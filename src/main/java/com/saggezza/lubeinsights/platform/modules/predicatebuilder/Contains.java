@@ -1,8 +1,7 @@
 package com.saggezza.lubeinsights.platform.modules.predicatebuilder;
 
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataElement;
-import com.saggezza.lubeinsights.platform.core.dataengine.module.Predicate;
-
+import java.util.function.Predicate;
 import java.util.function.Function;
 
 /**

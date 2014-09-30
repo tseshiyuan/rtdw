@@ -24,7 +24,7 @@ public class DataEngineApp {
 //                asList(new WriteConfig("/Users/albin/Desktop/filtered.csv", "|"))));
 
         ServiceRequest request = new ServiceRequest(steps);
-        ServiceResponse serviceResponse = engine.processRequest(request);
+        ServiceResponse serviceResponse = engine.processRequest(request, null);
 
         System.out.println(serviceResponse.getMessage());
     }

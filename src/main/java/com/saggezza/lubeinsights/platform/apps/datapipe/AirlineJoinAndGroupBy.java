@@ -1,6 +1,7 @@
 package com.saggezza.lubeinsights.platform.apps.datapipe;
 
 import com.google.common.collect.Sets;
+import com.saggezza.lubeinsights.platform.core.common.ConditionExpression;
 import com.saggezza.lubeinsights.platform.core.common.Params;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.*;
 import com.saggezza.lubeinsights.platform.core.common.datamodel.DataModel;
@@ -47,7 +48,7 @@ public class AirlineJoinAndGroupBy {
 
         ServiceRequest request = new ServiceRequest(serviceSteps(true));
 
-        ServiceResponse serviceResponse = engine.processRequest(request);
+        ServiceResponse serviceResponse = engine.processRequest(request, null);
 
 //        ServiceGateway gateway = new ServiceGateway();
 //        ServiceResponse serviceResponse = gateway.sendRequest(ServiceName.DATA_ENGINE,
@@ -70,11 +71,9 @@ public class AirlineJoinAndGroupBy {
 
         ServiceRequest request = new ServiceRequest(serviceSteps(true));
 
-        ServiceResponse serviceResponse = engine.processRequest(request);
-
-//        ServiceGateway gateway = new ServiceGateway();
-//        ServiceResponse serviceResponse = gateway.sendRequest(ServiceName.DATA_ENGINE,
-//                request);
+        ServiceGateway gateway = new ServiceGateway();
+        ServiceResponse serviceResponse = gateway.sendRequest(ServiceName.DATA_ENGINE,
+                request, DataEngine.DataModel);
 
         Set<String> tags = serviceResponse.getData().getTags();
         for(String tag : tags){
@@ -125,7 +124,6 @@ public class AirlineJoinAndGroupBy {
 
         workFlowEngine.stop();
         engine.stop();
-
     }
 
     private static ArrayList<ServiceRequest.ServiceStep> serviceSteps2(boolean standAlone) {
@@ -135,6 +133,13 @@ public class AirlineJoinAndGroupBy {
             DataChannel channel = makeDataChannel(tags);
             steps.add(new ServiceRequest.ServiceStep(ServiceCommand.DefineInput, Params.of(channel.toJson())));
         }
+
+        /*
+            Input maxCarrierInfo, parsedResult;
+            allInfoMaxCarrier = Join maxCarrierInfo key[0,1] parsedResult [0,8];
+            Output allInfoMaxCarrier;
+         */
+
         steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Input, Params.of(maxCarrierInfo, parsedResult)));
         steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Join,
                 Params.of(allInfoOfMaxCarrier, maxCarrierInfo, new Selection(0, 1), parsedResult, new Selection(Year, UniqueCarrier))));
@@ -171,10 +176,25 @@ public class AirlineJoinAndGroupBy {
             steps.add(new ServiceRequest.ServiceStep(ServiceCommand.DefineInput, Params.of(in.toJson())));
         }
 
+        /*
+            input infile;
+            parsedResult = map infile CsvParse "," 15;
+            selectedResult = select [0, 8, 9] from parsedResult;
+            dedupedSelected = dedup selectedResult;
+            countedFlights = map dedupSelected ColumnTransform 2 Constant 1;
+            summedByYearAndCarrier = groupBy countedFlights key[0, 1] aggregation[{2, Sum}];
+            maxOfFlights = groupBy summedByYearAndCarrier key[0] aggregation[{2, Max}];
+            maxCarrierInfo = Join maxOfFlights key[2], summedByYearAndCarrier key[1];
+            Output maxCarrierInfo, parsedResult
+         */
+
         steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Input, Params.of(infile)));
         steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Map, Params.of(infile, parsedResult, "CsvParse", ",",15)));//car1, fli;car2, fli
+        final String filteredFile = "filteredFile";
+        steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Filter, Params.of(parsedResult, filteredFile,
+                expression().toJson())));
         final String selectedResult = "selectedResult";
-        steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Map, Params.of(parsedResult, selectedResult, "Select",
+        steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Map, Params.of(filteredFile, selectedResult, "Select",
                 new Selection(Year, UniqueCarrier, FlightNum))));
         final String deupedSelected = "deupedSelected";
         steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Dedup, Params.of(selectedResult, deupedSelected)));
@@ -194,12 +214,22 @@ public class AirlineJoinAndGroupBy {
         return steps;
     }
 
+    private static ConditionExpression expression(){
+        return new ConditionExpression("ColumnPredicate",
+                Params.of(UniqueCarrier, new ConditionExpression("Not",
+                        Params.of(new ConditionExpression("Equals",
+                                Params.of("WN"))))));
+    }
+
+
     public static void main(String[] args) {
+        ;
         try {
             System.setProperty("service.conf", appProperties.getProperty("serviceFile"));
 //            System.out.println(System.getProperty("java.class.path"));
 //            testDataEngineAlone();
-            testCase();
+            testDataEngineModelTransform();
+//            testCase();
         } catch (Throwable e) {
             e.printStackTrace();
         } finally {

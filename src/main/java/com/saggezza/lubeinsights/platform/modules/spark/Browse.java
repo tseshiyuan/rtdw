@@ -17,6 +17,8 @@ import com.saggezza.lubeinsights.platform.core.serviceutil.ServiceResponse;
 import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaRDD;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -27,11 +29,19 @@ public class Browse implements DataEngineModule, DataEngineMetaSupport {
 
     public static final Logger logger = Logger.getLogger(Filter.class);
     final static String output = "_output";
+    private int pageSize = 20;
+    private int pageNum = 1;
 
     public Browse(){
     }
 
     private Browse(Params params){
+        if(params.size() > 1){
+            this.pageSize = params.getSecond();
+        }
+        if(params.size() > 2){
+            this.pageNum = params.getThird();
+        }
     }
 
 
@@ -43,9 +53,25 @@ public class Browse implements DataEngineModule, DataEngineMetaSupport {
         Params params = step.getParams();
         DataRef key = params.getFirst();
         context.loadFile(output, key);
-        List collect = context.getDataRef(output).collect();
-        channel.putDataRef(output, new DataRef(DataRefType.VALUE, new DataElements(collect)));
+        JavaRDD outputRDD = context.getDataRef(output);
+        Iterator rddIter = outputRDD.toLocalIterator();
+
+        channel.putDataRef(output, new DataRef(DataRefType.VALUE, new DataElements(getPage(rddIter))));
         context.setResponse(new ServiceResponse("OK", "OKAY", channel));
+    }
+
+    private List getPage(Iterator iterator){
+        List list = new ArrayList<>();
+        for(int i=1; i < pageNum; i++){//All previous pages
+            for(int j=1; j <= pageSize && iterator.hasNext(); j++){
+                iterator.next();//Traversing
+            }
+        }
+        //Current page
+        for(int j=1; j <= pageSize && iterator.hasNext(); j++){
+            list.add(iterator.next());
+        }
+        return list;
     }
 
     @Override

@@ -29,6 +29,8 @@ public abstract class PlatformService {
 
     public static final Logger logger = Logger.getLogger(PlatformService.class);
     public static final int PLATFORM_SERVICE_PORT = 8080;
+    public static final String Default = "default";
+    public static final String Command = "command";
     protected ServiceName name;
     protected int port;
     protected String address;
@@ -68,7 +70,9 @@ public abstract class PlatformService {
                 try {
                     // translate to service language
                     ServiceRequest serviceRequest = HttpServletRequest2ServiceRequest(request);
-                    ServiceResponse serviceResponse = processRequest(serviceRequest);
+                    String command = request.getParameter(Command);
+                    command = command == null ? Default : command;
+                    ServiceResponse serviceResponse = processRequest(serviceRequest, command);
                     response.setContentType("text/html;charset=utf-8");
                     response.setStatus(HttpServletResponse.SC_OK);
                     baseRequest.setHandled(true);
@@ -79,6 +83,7 @@ public abstract class PlatformService {
                 }
             }
         };
+
         jettyServer.setHandler(handler);
         // TODO: can extend to context or servlet based handlers
         jettyServer.start();
@@ -100,7 +105,8 @@ public abstract class PlatformService {
     private ServiceRequest HttpServletRequest2ServiceRequest(HttpServletRequest request) {
 
         try {
-            String queryDecoded = URLDecoder.decode(request.getParameter("request"), "UTF-8");
+            String requestLoad = request.getParameter("request");
+            String queryDecoded = URLDecoder.decode(requestLoad, "UTF-8");
             System.out.println(queryDecoded);
 
             ServiceRequest serviceRequest = ServiceRequest.fromJson(queryDecoded);  // query is: "resuest=***"
@@ -151,9 +157,10 @@ public abstract class PlatformService {
     /**
      * process a request. This is to be implemented by subclasses
      * @param request
+     * @param command
      * @return
      */
-    public abstract ServiceResponse processRequest(ServiceRequest request);
+    public abstract ServiceResponse processRequest(ServiceRequest request, String command);
 
 
 }

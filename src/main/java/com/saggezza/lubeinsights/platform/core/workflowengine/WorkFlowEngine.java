@@ -12,7 +12,6 @@ import org.apache.log4j.Logger;
 
 import java.io.FileInputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -33,10 +32,11 @@ public class WorkFlowEngine extends PlatformService {
     /**
      * process a request (of running a workflow)
      * @param request
+     * @param command
      * @return an OK ServiceResponse, whose data field is a DataChannel. Or an ERROR ServiceResponse
      * (A DataChannel is a map from identifier to DataRef (like a value, file or table)
      */
-    public ServiceResponse processRequest(ServiceRequest request) {
+    public ServiceResponse processRequest(ServiceRequest request, String command) {
 
         try {
 

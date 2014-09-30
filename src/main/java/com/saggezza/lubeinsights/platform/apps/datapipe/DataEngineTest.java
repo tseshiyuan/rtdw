@@ -34,7 +34,7 @@ public class DataEngineTest {
         ArrayList<ServiceRequest.ServiceStep> steps = serviceSteps(true);
 
         DataEngine dataEngine = new DataEngine();
-        ServiceResponse serviceResponse = dataEngine.processRequest(new ServiceRequest(steps));
+        ServiceResponse serviceResponse = dataEngine.processRequest(new ServiceRequest(steps), null);
         DataChannel data = serviceResponse.getData();
 
         for(String each : data.getTags()){

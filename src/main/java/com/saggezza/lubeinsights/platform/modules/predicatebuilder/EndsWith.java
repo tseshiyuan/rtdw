@@ -1,8 +1,7 @@
 package com.saggezza.lubeinsights.platform.modules.predicatebuilder;
 
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataElement;
-import com.saggezza.lubeinsights.platform.core.dataengine.module.Predicate;
-
+import java.util.function.Predicate;
 import java.util.function.Function;
 
 /**
@@ -16,7 +15,7 @@ import java.util.function.Function;
  * Predicate<DataElement> filter = function.apply("###");
  * filter.apply(new DataElement(DataType.TEXT,"###comment"))  returns true
  */
-public class EndsWith implements Function<String,Predicate<DataElement>> {
+public class EndsWith implements Function<String,Predicate> {
 
     public Predicate<DataElement> apply(String endsWith) {
         return new Predicate<DataElement>() {

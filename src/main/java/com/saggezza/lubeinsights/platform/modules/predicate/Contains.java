@@ -10,7 +10,7 @@ import com.saggezza.lubeinsights.platform.core.dataengine.module.Predicate;
  *
  * Checks whether a specific string exists in the data element.
  */
-public class Contains implements Predicate<DataElement> {
+public class Contains implements Predicate {
 
     private final String contains;
 

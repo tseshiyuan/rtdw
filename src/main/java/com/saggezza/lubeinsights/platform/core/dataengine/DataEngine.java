@@ -1,6 +1,5 @@
 package com.saggezza.lubeinsights.platform.core.dataengine;
 
-import com.saggezza.lubeinsights.platform.core.common.datamodel.DataModel;
 import com.saggezza.lubeinsights.platform.core.common.modules.ModuleException;
 import com.saggezza.lubeinsights.platform.core.dataengine.spark.SparkExecutionContext;
 import com.saggezza.lubeinsights.platform.core.serviceutil.PlatformService;
@@ -22,6 +21,7 @@ public class DataEngine extends PlatformService {
 
 
     public static final Logger logger = Logger.getLogger(DataEngine.class);
+    public static final String DataModel = "dataModel";
 
     public DataEngine() {
         super(ServiceName.DATA_ENGINE);
@@ -67,8 +67,14 @@ public class DataEngine extends PlatformService {
     }
 
     @Override
-    public ServiceResponse processRequest(ServiceRequest request) {
-        return processData(request);
+    public ServiceResponse processRequest(ServiceRequest request, String command) {
+        if(Default.equals(command)){
+            return processData(request);
+        }else if(DataModel.equals(command)){
+            return processDataModel(request);
+        }else {
+            throw new RuntimeException("Command not supported");
+        }
     }
 
     private ServiceResponse processData(ServiceRequest request) {

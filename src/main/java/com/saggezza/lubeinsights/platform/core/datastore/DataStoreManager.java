@@ -65,7 +65,7 @@ public class DataStoreManager extends PlatformService {
 
     public DataStoreManager() {super(ServiceName.DATASTORE_MANAGER);}
 
-    public ServiceResponse processRequest(ServiceRequest request) {
+    public ServiceResponse processRequest(ServiceRequest request, String command) {
         return null;  // TODO
     }
 

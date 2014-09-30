@@ -10,7 +10,7 @@ import com.saggezza.lubeinsights.platform.core.dataengine.module.Predicate;
  *
  * Checks whether the input starts with a specific string.
  */
-public class StartsWith implements Predicate<DataElement> {
+public class StartsWith implements Predicate {
 
     private final String startsWith;
 
