@@ -32,11 +32,8 @@ public class SymbolTable {
         }
         UnsignedInteger value = counter;
         hm.put(key,value);
-        counter.plus(UnsignedInteger.ONE);
+        counter = counter.plus(UnsignedInteger.ONE);
         return value;
     }
-
-
-
 
 }

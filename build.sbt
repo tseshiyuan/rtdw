@@ -37,8 +37,9 @@ mergeStrategy in assembly := {
 
 
 libraryDependencies ++= Seq(
+"com.google.guava" % "guava" % "18.0",
 "com.101tec" % "zkclient" % "0.4" exclude("org.apache.zookeeper", "zookeeper"),
-"org.apache.spark" % "spark-core_2.10" % "1.0.2" exclude("org.apache.zookeeper", "zookeeper"),
+"org.apache.spark" % "spark-core_2.10" % "1.1.0" exclude("org.apache.zookeeper", "zookeeper"),
 "org.eclipse.jetty.aggregate" % "jetty-all-server" % "8.1.14.v20131031",
 "org.hamcrest" % "hamcrest-all" % "1.3" % "test",
 "junit" % "junit" % "4.4" % "test",
@@ -60,7 +61,7 @@ artifact in (Compile, assembly) ~= { art =>
 crossPaths := false
 
 //publishTo := Some(Resolver.file("file",  new File( Path.userHome+"/.ivy2/local/" )) )
-
+ 
 publishMavenStyle := true
 
 //credentials += Credentials(Path.userHome / ".ivy2" / ".credentials")
