@@ -64,15 +64,19 @@ public class DataElement implements Serializable {
         }
     }
 
-    boolean isPrimitive(){
+    public final boolean isPrimitive(){
         return value != null && dataType != null;
     }
 
-    boolean isList(){
+    public final boolean isNumber() { return dataType==DataType.NUMBER;}
+    public final boolean isText() { return dataType==DataType.TEXT;}
+    public final boolean isDateTime() { return dataType==DataType.DATETIME;}
+
+    public final boolean isList(){
         return list != null && !list.isEmpty();
     }
 
-    boolean isMap(){
+    public final boolean isMap(){
         return map != null && !map.isEmpty();
     }
 
@@ -335,7 +339,7 @@ public class DataElement implements Serializable {
             ret.add(this);
         }else if(isList()){
             ret.addAll(list);
-        }else {
+        }else if(isMap()){
             ret.addAll(map.values());
         }
         return ret;
@@ -354,9 +358,10 @@ public class DataElement implements Serializable {
             return 1;
         }else if(isList()){
             return list.size();
-        }else {
+        }else if(isMap()){
             return map.size();
         }
+        return 0;
     }
 
 

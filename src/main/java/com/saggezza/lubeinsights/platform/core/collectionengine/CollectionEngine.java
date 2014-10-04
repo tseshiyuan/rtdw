@@ -1,6 +1,6 @@
 package com.saggezza.lubeinsights.platform.core.collectionengine;
 
-import com.saggezza.lubeinsights.platform.core.collectionengine.kafka.KafkaUtil;
+import com.saggezza.lubeinsights.platform.core.common.kafka.KafkaUtil;
 import com.saggezza.lubeinsights.platform.core.common.Params;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataElement;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataRef;

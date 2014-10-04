@@ -13,10 +13,7 @@ import com.saggezza.lubeinsights.platform.core.dataengine.ErrorCode;
 import com.saggezza.lubeinsights.platform.core.datastore.Stats;
 import com.saggezza.lubeinsights.platform.modules.datamodel.validator.ValidatorModule;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.function.Function;
 
 /**
@@ -72,6 +69,74 @@ public class DataModel {
         return descMap;
     }
 
+    /**
+     * return the type for field named field
+     * @param field
+     * @return null if not a map
+     */
+    public final DataType typeAt(String field) {
+        if (isMap()) {
+            return descMap.get(field).getDataType();
+        }
+        else {
+            return null;
+        }
+    }
+
+    /**
+     * return the type for field at position index
+     * @param index
+     * @return null of not a list
+     */
+    public final DataType typeAt(int index) {
+        if (isList()) {
+            return descList.get(index).getDataType();
+        }
+        else {
+            return null;
+        }
+    }
+
+    public TreeSet<String> getAllFieldNames() {
+        return getAllFieldNames(this);
+    }
+
+
+    /**
+     * such as a.2.b or 0.a.b
+     * @param dataModel
+     * @return null if primitive type
+     */
+    private static final TreeSet<String> getAllFieldNames(DataModel dataModel) {
+        if (dataModel.isPrimitive()) {
+            return null;
+        }
+        if (dataModel.isMap()) {
+            TreeSet<String> result = new TreeSet<String>();
+            for (String field: dataModel.descMap.keySet()) {
+                TreeSet<String> childNames = getAllFieldNames(dataModel.descMap.get(field));
+                if (childNames != null) {
+                    for (String cn: childNames) {
+                        result.add(field+"."+cn);
+                    }
+                }
+            }
+            return result;
+        }
+        if (dataModel.isList()) {
+            TreeSet<String> result = new TreeSet<String>();
+            for (int i=0; i<dataModel.descList.size(); i++) {
+                TreeSet<String> childNames = getAllFieldNames(dataModel.descList.get(i));
+                if (childNames != null) {
+                    for (String cn: childNames) {
+                        result.add(i+"."+cn);
+                    }
+                }
+            }
+            return result;
+        }
+        return null;
+    }
 
     /**
      * add typeValidator to validators

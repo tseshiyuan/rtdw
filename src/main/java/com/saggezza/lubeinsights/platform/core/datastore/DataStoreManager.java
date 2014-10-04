@@ -89,7 +89,7 @@ public class DataStoreManager extends PlatformService {
      * @param storageEngine
      * @param isTemporal
      */
-    public DataStore newDataStore(String name, DataModel dataModel, StorageEngine storageEngine, boolean isTemporal, boolean force) {
+    public DataStore newDataStore(String name, DataModel dataModel, StorageEngine storageEngine, String[] indexFields, boolean isTemporal, boolean force) {
         if (allDataStores.containsKey(name) && !force) {
             logger.error("Data Store "+name+" already exits. Cannot add it.");
             return null;
@@ -98,10 +98,10 @@ public class DataStoreManager extends PlatformService {
             // create one and add to catalog
             DataStore store=null;
             if (isTemporal) {
-                store = new TemporalStore(name, dataModel, storageEngine);
+                store = new TemporalStore(name, dataModel, storageEngine, indexFields);
             }
             else {
-                store = new ReferenceStore(name, dataModel, storageEngine);
+                store = new ReferenceStore(name, dataModel, storageEngine, indexFields);
             }
             // add it to catalog
             DataStoreCatalog.addDataStore(tenantName, applicationName, store);
@@ -121,7 +121,7 @@ public class DataStoreManager extends PlatformService {
     public TemporalStore deriveDataStore(String fromName, String toName, DeriveSpec deriveSpec) {
         TemporalStore from = (TemporalStore) getDataStore(fromName);
         DataModel dm = deriveSpec.deriveDataModel(from.getDataModel());
-        TemporalStore to = (TemporalStore) newDataStore(toName, dm, storageEngine, true, true);
+        TemporalStore to = (TemporalStore) newDataStore(toName, dm, storageEngine, deriveSpec.getIndexFields(), true, true);
         // set up derivation in both data stores
         from.derive(deriveSpec,to);
         // then add to catalog

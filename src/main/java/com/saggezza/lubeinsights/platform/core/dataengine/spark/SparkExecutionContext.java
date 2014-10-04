@@ -36,6 +36,12 @@ public class SparkExecutionContext extends DataExecutionContext {
         this.dataRefs = new HashMap<>();
     }
 
+    public SparkExecutionContext(JavaSparkContext context) {
+        this.context = context;
+        this.sparkExecutor = new SparkExecutor();
+        this.dataRefs = new HashMap<>();
+    }
+
     @Override
     public DataChannel getDataChannel() {
         return dataChannel;

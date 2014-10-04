@@ -196,7 +196,10 @@ public class CacheStore {
      */
     public void flush(int startWindow) {
         if (flusher== null) {
-            flusher = new Flusher(temporalStore.getStorageEngine().getStorageEngineClient(temporalStore.getName(), windowName, groupByKeyAddress, aggFieldAlias),this);
+            // convert groupByKeyAddress back to string
+            flusher = new Flusher(temporalStore.getStorageEngine().getStorageEngineClient(
+                                           temporalStore.getName(), getStorageKeys(), null, aggFieldAlias), // no regular field names
+                                  this);
         }
         // move all windows to flush queue starting from startWindow
         for (int i=0; i<windows.length; i++) {
@@ -209,5 +212,18 @@ public class CacheStore {
         }
     }
 
+
+    /**
+     * generate the rowkeys for HBase by combining windowName and groupBy
+     * @return
+     */
+    public String[] getStorageKeys() {
+        String[] keyNames = new String[groupByKeyAddress.length+1];
+        keyNames[0] = windowName;
+        for (int i=1; i<= groupByKeyAddress.length; i++) {
+            keyNames[i] = groupByKeyAddress.toString();
+        }
+        return keyNames;
+    }
 
 }

@@ -1,7 +1,7 @@
 package com.saggezza.lubeinsights.platform.core.collectionengine;
 
-import com.saggezza.lubeinsights.platform.core.collectionengine.kafka.KafkaProducer;
-import com.saggezza.lubeinsights.platform.core.collectionengine.kafka.KafkaUtil;
+import com.saggezza.lubeinsights.platform.core.common.kafka.KafkaProducer;
+import com.saggezza.lubeinsights.platform.core.common.kafka.KafkaUtil;
 
 import java.io.BufferedReader;
 import java.io.File;

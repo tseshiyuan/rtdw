@@ -16,7 +16,11 @@ public final class Selection implements Serializable{
     private int[] indices;//TODO - make fields final. See if it causes trouble with Gson.
     private String[] names;
 
+    public static final Selection Empty = new Selection();
+
     private Selection(){
+        this.indices = new int[]{};
+        this.names = null;
     }
 
     public Selection(int... indices) {

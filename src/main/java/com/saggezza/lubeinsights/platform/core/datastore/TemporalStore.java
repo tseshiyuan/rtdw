@@ -27,8 +27,8 @@ public class TemporalStore extends DataStore {
     private transient HashMap<TemporalStore, Function<DataElement,DataElement>> derivedStores = null;
     private transient CacheStore cacheStore = null;
 
-    public TemporalStore(String name, DataModel dataModel, StorageEngine storageEngine) {
-        super(name,dataModel,storageEngine);
+    public TemporalStore(String name, DataModel dataModel, StorageEngine storageEngine, String[] indexNames) {
+        super(name,dataModel,storageEngine, indexNames);
     }
 
 

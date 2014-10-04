@@ -13,8 +13,8 @@ import com.saggezza.lubeinsights.platform.core.common.datamodel.DataModel;
  */
 public class ReferenceStore extends DataStore {
 
-    public ReferenceStore(String name, DataModel dataModel, StorageEngine storageEngine) {
-        super(name, dataModel, storageEngine);
+    public ReferenceStore(String name, DataModel dataModel, StorageEngine storageEngine, String[] indexFields) {
+        super(name, dataModel, storageEngine, indexFields);
     }
 
     public final void close() {

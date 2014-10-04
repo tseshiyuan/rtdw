@@ -4,10 +4,8 @@ package com.saggezza.lubeinsights.platform.core.collectionengine;
  * Created by chiyao on 8/25/14.
  */
 
-import com.saggezza.lubeinsights.platform.core.collectionengine.kafka.KafkaConsumer;
-import com.saggezza.lubeinsights.platform.core.collectionengine.kafka.KafkaUtil;
-import com.saggezza.lubeinsights.platform.core.serviceutil.ServiceConfig;
-import kafka.consumer.ConsumerIterator;
+import com.saggezza.lubeinsights.platform.core.common.kafka.KafkaConsumer;
+import com.saggezza.lubeinsights.platform.core.common.kafka.KafkaUtil;
 import org.apache.log4j.Logger;
 
 import java.util.concurrent.ExecutorService;
@@ -70,10 +68,7 @@ public class StreamCollectionSource implements AutoCloseable {
         if (kafkaConsumer == null) {
             kafkaConsumer = new KafkaConsumer(groupId,false); // just use one group for now
         }
-        if (dataQueue == null) {
-            dataQueue = new LinkedBlockingQueue<String>();
-        }
-        kafkaConsumer.start(desc,dataQueue);
+        dataQueue = kafkaConsumer.start(desc);
     }
 
     /**

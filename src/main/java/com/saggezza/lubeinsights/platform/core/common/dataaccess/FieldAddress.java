@@ -57,6 +57,26 @@ public class FieldAddress {
 
     public final Object[] getCoordinate() {return coordinate;}
 
-
+    /**
+     * convert address to string representation
+     * for example,
+     * [userId] becomes userId,
+     * [userId,1] becomes userId[1]
+     * [userId,part1,field1] becomes userId.part1.field1
+     */
+    @Override
+    public final String toString() {
+        StringBuilder sb = new StringBuilder();
+        for (Object s: coordinate) {
+            if (s instanceof String) {
+                sb.append(s).append(".");
+            }
+            else if (s instanceof Integer) {
+                sb.append('[').append(((Integer)s).intValue()).append("]").append(".");
+            }
+        }
+        sb.setLength(sb.length()-1);
+        return sb.toString();
+    }
 
 }

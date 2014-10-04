@@ -4,10 +4,9 @@ package com.saggezza.lubeinsights.platform.core.collectionengine;
  * Created by chiyao on 8/25/14.
  */
 
-import com.saggezza.lubeinsights.platform.core.collectionengine.kafka.KafkaConsumer;
-import com.saggezza.lubeinsights.platform.core.collectionengine.kafka.KafkaUtil;
-import com.saggezza.lubeinsights.platform.core.serviceutil.ServiceConfig;
-import java.lang.RuntimeException;
+import com.saggezza.lubeinsights.platform.core.common.kafka.KafkaConsumer;
+import com.saggezza.lubeinsights.platform.core.common.kafka.KafkaUtil;
+
 import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.log4j.Logger;
 
@@ -69,8 +68,7 @@ public class BatchCollectionSource implements AutoCloseable {
             // use current time as the NEW groupId so that it always reads the topic from the beginning
             kafkaConsumer = new KafkaConsumer(String.valueOf(System.currentTimeMillis()),true);
         }
-        LinkedBlockingQueue<String> dataQueue = new LinkedBlockingQueue<String>();
-        kafkaConsumer.start(topic,dataQueue);
+        LinkedBlockingQueue<String> dataQueue = kafkaConsumer.start(topic);
         return dataQueue; // caller will get result from this dataQueue
     }
 

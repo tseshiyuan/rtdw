@@ -10,6 +10,8 @@ import com.saggezza.lubeinsights.platform.core.common.dataaccess.*;
 import com.saggezza.lubeinsights.platform.core.common.datamodel.DataModel;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.concurrent.Future;
 
 /**
@@ -23,11 +25,13 @@ public abstract class DataStore {
     protected String name;
     protected DataModel dataModel;  // describes data model, storage paradigm (relational, columnar, key based memory
     protected StorageEngine storageEngine = null;
+    protected String[] indexFields;
 
-    public DataStore(String name, DataModel dataModel, StorageEngine storageEngine) {
+    public DataStore(String name, DataModel dataModel, StorageEngine storageEngine, String[] indexFields) {
         this.name = name;
         this.dataModel = dataModel;
         this.storageEngine = storageEngine;
+        this.indexFields = indexFields;
     }
 
     public final String getName() {return name;}
@@ -35,6 +39,36 @@ public abstract class DataStore {
     public final DataModel getDataModel() {return dataModel;}
 
     public final StorageEngine getStorageEngine() {return storageEngine;}
+
+    public final String[] getIndexFields() {return indexFields;}
+
+    /**
+     * called when storage manager receives an open request
+     */
+    public void open() {
+        setupStorageEngine();
+        setupListener();
+    }
+
+    public final void setupStorageEngine() {
+        storageEngine.setupDataStore(this); // set up hbase table
+    }
+
+    public final void setupListener() {
+        // set up kafka consumer
+    }
+
+    /**
+     * get all fields other than index fields
+     * @return
+     */
+    public final String[] getRegularFields() {
+        Collection<String> fields = dataModel.getAllFieldNames();
+        for (String f: indexFields) {
+            fields.remove(f);
+        }
+        return (String[]) fields.toArray();
+    }
 
     /**
      * add type tag and json notion together
@@ -54,8 +88,5 @@ public abstract class DataStore {
     }
 
     public abstract void close() throws IOException;
-
-
-
 
 }

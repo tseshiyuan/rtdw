@@ -56,8 +56,9 @@ public class GroupBy implements DataEngineModule, DataEngineMetaSupport {
         String inputTag = params.get(0);
         String outputTag = params.get(1);
         Selection groupBykeySpec = params.get(2);
-        Selection applyAggregator = params.get(3);
-        Params groupByOperations = params.remainingFrom(4);
+
+        Selection applyAggregator = params.size() > 3 ? params.get(3) : Selection.Empty;
+        Params groupByOperations = params.size() > 4 ?params.remainingFrom(4) : Params.None;
 
         logger.debug(String.format("Performing group by of %s ", inputTag));
         JavaRDD<DataElement> input = context.getDataRef(inputTag);

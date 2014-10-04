@@ -53,6 +53,17 @@ public class DeriveSpec {
     }
 
     /**
+     * windowName + groupNames = indexNames
+     * @return
+     */
+    public final String[] getIndexFields() {
+        String[] indexFields = new String[groupByNames.length+1];
+        indexFields[0] = windowName;
+        System.arraycopy(groupByNames,0,indexFields,1,groupByNames.length);
+        return indexFields;
+    }
+
+    /**
      * For example, we can derive the TemporalStore transaction-activities into another TemporalStore with this spec:
      *
      * select date(activityTime) activityDate, city, productId, agg(transactionPrice) AggPrice
