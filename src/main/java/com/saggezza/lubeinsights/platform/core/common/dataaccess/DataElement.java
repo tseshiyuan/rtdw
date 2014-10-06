@@ -232,6 +232,40 @@ public class DataElement implements Serializable {
         }
     }
 
+    public void setToList(ArrayList<DataElement> al) {
+        dataType = null;
+        value = null;
+        this.list = al;
+        map = null;
+    }
+
+    public void setToMap(TreeMap<String, DataElement> map) {
+        dataType = null;
+        value = null;
+        list = null;
+        this.map = map;
+    }
+
+    public void setToNumber(Number n) {
+        dataType = DataType.NUMBER;
+        value = n;
+        list = null;
+        map = null;
+    }
+
+    public void setToText(String s) {
+        dataType = DataType.TEXT;
+        value = s;
+        list = null;
+        map = null;
+    }
+
+    public void setToDateTime(Date d) {
+        dataType = DataType.DATETIME;
+        value = d;
+        list = null;
+        map = null;
+    }
 
     /**
      * in-place update
@@ -258,18 +292,18 @@ public class DataElement implements Serializable {
                 case TEXT:
                     return (String) value;
                 case NUMBER:
-                    return String.valueOf((Number) value);
+                    return ((Number) value).toString();
                 case DATETIME:
-                    return ((Date) value).toString();
+                    return "^"+String.valueOf(((Date) value).getTime()/1000); // use ^ to distinguish from number
             }
         }
         if (list != null) {
-            StringBuilder sb = new StringBuilder("");
+            StringBuilder sb = new StringBuilder("[");
             for (DataElement e: list) {
                 sb.append(e.toString()).append(",");
             }
             sb.setLength(sb.length()-1);
-            sb.append("");
+            sb.append("]");
             return sb.toString();
         }else if (map != null) {
             StringBuilder sb = new StringBuilder("{");
@@ -284,6 +318,10 @@ public class DataElement implements Serializable {
         }else {
             return null;
         }
+    }
+
+    public static final DataElement fromString(String s) {
+        return DataElementParser.parse(s);
     }
 
     public DataElement valueByName(String name){
