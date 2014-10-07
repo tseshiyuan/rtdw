@@ -138,8 +138,7 @@ public abstract class PlatformService {
      * @return
      */
     public ServiceResponse sendRequest(ServiceName serviceName, ServiceRequest request)
-        throws InterruptedException, TimeoutException, ExecutionException, Exception {
-
+        throws Exception {
         return serviceGateway.sendRequest(serviceName, request);
     }
 
@@ -149,8 +148,8 @@ public abstract class PlatformService {
      * @param request
      * @return
      */
-    public void sendRequestAsync(ServiceName serviceName, ServiceRequest request, ServiceResponseHandler handler) {
-
+    public void sendRequestAsync(ServiceName serviceName, ServiceRequest request, ServiceResponseHandler handler)
+        throws Exception {
         serviceGateway.sendRequestAsync(serviceName, request, handler);
     }
 

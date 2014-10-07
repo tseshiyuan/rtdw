@@ -50,7 +50,7 @@ public class DataStoreCatalog {
             String[] typeAndJson = DataStore.getTypeAndJson(serializedDataStore);
             return (DataStore) GsonUtil.gson().fromJson(typeAndJson[1], Class.forName(typeAndJson[0]));
         } catch (Exception e) {
-            logger.error("Zookeeper access error: "+e.getMessage());
+            logger.error("Cannot get data store "+ name+ " : "+e.getMessage());
             throw new RuntimeException(e);
         }
     }
@@ -97,7 +97,11 @@ public class DataStoreCatalog {
             ConcurrentHashMap<String, DataStore> result = new ConcurrentHashMap<String, DataStore>();
             if (names != null) {
                 for (String name : names) {
-                    result.put(name, getDataStore(tenantName, applicationName, name));
+                    try {
+                        result.put(name, getDataStore(tenantName, applicationName, name));
+                    } catch (Exception e) {
+                        logger.error("Cannot get data store "+name+ ". Continue with other data stores");
+                    }
                 }
             }
             return result;

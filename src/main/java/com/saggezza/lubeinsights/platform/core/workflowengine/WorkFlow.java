@@ -233,8 +233,6 @@ public class WorkFlow {
             System.out.println(response.getData().toJson());
 
             engine.stop();
-            gateway.close();
-
             System.out.println("done");
 
             System.exit(0);

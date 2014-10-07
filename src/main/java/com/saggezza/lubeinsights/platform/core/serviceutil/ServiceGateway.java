@@ -15,7 +15,6 @@ import java.util.concurrent.TimeoutException;
  */
 public class ServiceGateway {
 
-    protected HttpClient httpClient = null;
     protected static ServiceGateway gateway = null;
 
     /**
@@ -49,19 +48,20 @@ public class ServiceGateway {
      * @return
      */
     public ServiceResponse sendRequest(ServiceName serviceName, ServiceRequest request, String command)
-            throws InterruptedException, TimeoutException, ExecutionException, Exception {
+            throws Exception {
 
-        if (httpClient==null) {
-            httpClient = new HttpClient();
-            httpClient.start();
-        }
         String address = ServiceCatalog.findAddress(serviceName);
+        if (address==null) {
+            throw new RuntimeException("Cannot find service "+serviceName+" to send requests to");
+        }
         String[] split = address.split(":");
         String host = split[0];
         int port =  Integer.parseInt(split[1]);
         //System.out.println("request sent to: "+ address);
         //System.out.println(request.toJson());
+        HttpClient httpClient = new HttpClient();
         try {
+            httpClient.start();
             //URI uri = new URI("http", address, "request?", request.toJson());
             //URI uri = new URI("http", address, "/request?", "test");
             //URI uri = new URI("http", null, "192.168.1.79", 8081, "/", request.toJson(), null);
@@ -83,6 +83,10 @@ public class ServiceGateway {
         } catch (Exception e) {
             e.printStackTrace();
             return null;
+        } finally {
+            if (httpClient != null) {
+                httpClient.stop();
+            }
         }
     }
 /*
@@ -113,12 +117,11 @@ public class ServiceGateway {
          * @param request
          * @return
          */
-    public void sendRequestAsync(ServiceName serviceName, ServiceRequest request, ServiceResponseHandler handler) {
+    public void sendRequestAsync(ServiceName serviceName, ServiceRequest request, ServiceResponseHandler handler) throws Exception {
 
+        HttpClient httpClient = new HttpClient();
         try {
-            if (httpClient == null) {
-                httpClient = new HttpClient();
-            }
+            httpClient.start();
             String address = ServiceCatalog.findAddress(serviceName);
             String url = new StringBuilder(address).append("/request?").append(request.toJson()).toString();
             ContentExchange exchange = new ContentExchange(false);
@@ -129,12 +132,10 @@ public class ServiceGateway {
             // TODO: there are other content handling in jetty
         }catch (Exception e){
             throw new RuntimeException(e);
-        }
-    }
-
-    public void close() throws Exception {
-        if (httpClient != null) {
-            httpClient.stop();
+        } finally {
+            if (httpClient != null) {
+                httpClient.stop();
+            }
         }
     }
 

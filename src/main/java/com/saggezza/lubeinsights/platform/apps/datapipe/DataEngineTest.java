@@ -60,7 +60,6 @@ public class DataEngineTest {
 
         System.out.println(serviceResponse.getData().getTags().iterator().next());
 
-        gateway.close();
         dataEngine.stop();
 
         System.exit(0);

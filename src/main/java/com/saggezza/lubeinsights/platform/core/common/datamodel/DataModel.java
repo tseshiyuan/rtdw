@@ -218,7 +218,7 @@ public class DataModel {
     public String toString() {
         StringBuilder builder = new StringBuilder();
         if(isPrimitive()){
-            return "{type : "+dataType+"}";
+            return dataType.name();
         }else if(isList()){
             builder.append("[");
             for(int i=0; i < descList.size(); i++){
@@ -227,9 +227,12 @@ public class DataModel {
             }
             return builder.substring(0, (builder.length() -1) ) + "]";
         }else{
+            builder.append("{");
             for(HashMap.Entry<String, DataModel> each : descMap.entrySet()){
-                builder.append("{ "+each.getKey()+" : "+each.getValue().toString() + " } \n");
+                builder.append(each.getKey()+":"+each.getValue().toString() + ",");
             }
+            builder.setLength(builder.length()-1);
+            builder.append("}");
             return builder.toString();
         }
     }

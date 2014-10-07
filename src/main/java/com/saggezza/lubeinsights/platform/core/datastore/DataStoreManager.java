@@ -5,11 +5,13 @@ package com.saggezza.lubeinsights.platform.core.datastore;
  */
 
 import com.saggezza.lubeinsights.platform.core.common.Utils;
+import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataChannel;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataElement;
 import com.saggezza.lubeinsights.platform.core.common.datamodel.DataModel;
 import com.saggezza.lubeinsights.platform.core.common.datamodel.DataType;
 import com.saggezza.lubeinsights.platform.core.common.metadata.ZKUtil;
 import com.saggezza.lubeinsights.platform.core.serviceutil.*;
+import com.saggezza.lubeinsights.platform.core.workflowengine.WorkFlow;
 import org.apache.log4j.Logger;
 
 import java.io.BufferedReader;
@@ -59,14 +61,61 @@ public class DataStoreManager extends PlatformService {
             String[] fromAndTo = key.split("->");
             TemporalStore from = (TemporalStore)allDataStores.get(fromAndTo[0]);
             TemporalStore to = (TemporalStore)allDataStores.get(fromAndTo[1]);
-            from.derive(DeriveSpec.fromJson(deriveSpecs.get(key)),to); // set up derive info in from and to
+            if (from != null && to != null) {
+                from.derive(DeriveSpec.fromJson(deriveSpecs.get(key)), to); // set up derive info in from and to
+            }
         }
     }
 
     public DataStoreManager() {super(ServiceName.DATASTORE_MANAGER);}
 
     public ServiceResponse processRequest(ServiceRequest request, String command) {
-        return null;  // TODO
+        try {
+
+            logger.info("DataStoreManager processes request:\n" + request.toJson());
+
+            if (request == null) {
+                logger.error("request is null");
+            }
+
+            ArrayList<ServiceRequest.ServiceStep> steps = request.getCommandList();
+
+            if (steps == null || steps.size() != 1) {
+                return new ServiceResponse("ERROR", "Bad Request for DataStoreManager. Only one command is allowed in request", null);
+            }
+            ServiceRequest.ServiceStep step = steps.get(0);
+
+            // command interpreter
+            ServiceResponse response = null;
+            switch (step.getCommand()) {
+                case OPEN_STORE_R:
+                    // parse params
+                    String dataStoreName = (String) step.getParams().get(0);
+                    String topic = (String) step.getParams().get(1);
+                    DataStore dataStore = getDataStore(dataStoreName);
+                    dataStore.open(topic);
+                    response = new ServiceResponse("OK", null, null); // no data to transfer back
+                    break;
+                case CLOSE_STORE:
+                    // parse params
+                    dataStoreName = (String) step.getParams().get(0);
+                    dataStore = getDataStore(dataStoreName);
+                    dataStore.close();
+                    response = new ServiceResponse("OK", null, null); // no data to transfer back
+                    break;
+
+                default:
+                    // only support one command now
+                    response = new ServiceResponse("ERROR", "Bad command for DataStoreManager. Only OPEN_STORE and CLOSE_STORE is valid", null);
+            }
+            logger.info("DataStoreManager's response:\n" + response.toJson());
+            return response;
+        } catch (Exception e) {
+            logger.trace("DataStoreManager Error", e);
+            return new ServiceResponse("ERROR", e.getMessage(), null);
+        }
+
+
     }
 
     /**
@@ -206,17 +255,15 @@ public class DataStoreManager extends PlatformService {
             tm1.put("age", new DataModel(DataType.NUMBER));
             tm1.put("createDate", new DataModel((DataType.NUMBER)));
             DataModel dm1 = new DataModel(tm1);
-*/
+
             // define data mode dm2: <gender:text, createDate:number>
-/*
+
             TreeMap<String, DataModel> tm2 = new TreeMap<String, DataModel>();
             tm2.put("gender", new DataModel(DataType.TEXT));
             tm2.put("createDate", new DataModel((DataType.NUMBER)));
             tm2.put("userCount", new DataModel((DataType.NUMBER)));
             DataModel dm2 = new DataModel(tm2);
-*/
 
-/*
             // define deriveSpec
             String filterName = null;  // no filter
             String aggFields = null;  // no field to aggregate
@@ -225,6 +272,7 @@ public class DataStoreManager extends PlatformService {
             String temporalKeys = "[createDate]";
             String windowFunction = null;  // don't transfer window value
             String windowName = "createDate";
+            String[] indexFields = new String[] {"createDate","gender"};
             DeriveSpec deriveSpec = new DeriveSpec(filterName,aggFields,aggFieldAlias,
                     groupByFields,temporalKeys,windowFunction,windowName);
 
@@ -232,7 +280,7 @@ public class DataStoreManager extends PlatformService {
             DataModel dm2 = deriveSpec.deriveDataModel(dm1);
 
             // define store1
-            TemporalStore store1 = (TemporalStore) mgr.newDataStore("store1", dm1, mgr.storageEngine, true, true);
+            TemporalStore store1 = (TemporalStore) mgr.newDataStore("store1", dm1, mgr.storageEngine, indexFields, true, true);
             // define store2
             TemporalStore store2 = mgr.deriveDataStore("store1","store2",deriveSpec);
 */
@@ -242,7 +290,7 @@ public class DataStoreManager extends PlatformService {
             System.out.println(store1.serialize());
             System.out.println(store2.serialize());
 
-
+/*
             // send elements to store1 (and propagate to store2)
             ArrayList<DataElement> al = readFromFile(args[0],store1.getDataModel());
             for (DataElement e: al) {
@@ -260,7 +308,7 @@ public class DataStoreManager extends PlatformService {
             System.out.println("exit");
             System.exit(0);
 
-
+*/
         } catch (Exception e) {e.printStackTrace();}
 
     }

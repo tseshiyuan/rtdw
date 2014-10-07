@@ -37,9 +37,9 @@ public class StorageEngine {
      * create table if not exists
      * @param dataStore
      */
-    public final void setupDataStore(DataStore dataStore) {
+    public final StorageEngineClient setupDataStore(DataStore dataStore) {
         if (type.equalsIgnoreCase("file")) {
-            return; // do nothing
+            return null; // do nothing
         }
         // set up hbase (create table if not exists)
         Connection conn = null;
@@ -49,21 +49,24 @@ public class StorageEngine {
             String sql = genSqlCreateTable(dataStore.getName(),dataStore.getIndexFields(),dataStore.getRegularFields(),dataStore.getDataModel());
             cstmt = conn.prepareCall(sql);
             cstmt.execute();
+            // then set up storage engine client
+            String[] fields = ObjectArrays.concat(dataStore.getIndexFields(), dataStore.getRegularFields(), String.class);
+            return getStorageEngineClient(dataStore.getName(),fields);
+
         } catch (SQLException e) {
             logger.trace(e);
             e.printStackTrace();
+            return null;
         } finally {
             if (cstmt != null) {
                 try {
                     cstmt.close();
-                } catch (Exception e) {
-                }
+                } catch (Exception e) {}
             }
             if (conn != null) {
                 try {
                     conn.close();
-                } catch (Exception e) {
-                }
+                } catch (Exception e) {}
             }
         }
     }
@@ -138,16 +141,27 @@ public class StorageEngine {
      */
     public StorageEngineClient getStorageEngineClient(String temporalStoreName, String[] keyNames, String[] regularFieldNames, String[] aggFieldNames) {
 
-        StorageEngineClient client = null;
-        String[] fields = ObjectArrays.concat(ObjectArrays.concat(keyNames, regularFieldNames, String.class),aggFieldNames,String.class);
+        String[] fields = ObjectArrays.concat(ObjectArrays.concat(keyNames, regularFieldNames, String.class), aggFieldNames, String.class);
+        return getStorageEngineClient(temporalStoreName, fields);
+    }
+
+    /**
+     *
+     * @param temporalStoreName
+     * @param fields
+     * @return a corresponding storage engine client based on type, or null if unknown type
+     */
+    public StorageEngineClient getStorageEngineClient(String temporalStoreName, String[] fields) {
         if (type.equalsIgnoreCase("hbase")) {
-            client = getHBaseClient(temporalStoreName,fields);
+            return getHBaseClient(temporalStoreName,fields);
         }
         else if (type.equalsIgnoreCase("file")) {
-            client = getFileClient(temporalStoreName,fields);
+            return getFileClient(temporalStoreName,fields);
         }
-        return client;
+        return null;
     }
+
+
 
     /**
      * generate a client and initialize the server
