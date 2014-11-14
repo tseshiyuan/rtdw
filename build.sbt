@@ -50,7 +50,7 @@ libraryDependencies ++= Seq(
   ExclusionRule(organization = "org.apache.zookeeper") )*/
 )
 
-// assembly publisher
+//assembly publisher
 artifact in (Compile, assembly) ~= { art =>
   art.copy(`classifier` = Some("assembly"))
 }
