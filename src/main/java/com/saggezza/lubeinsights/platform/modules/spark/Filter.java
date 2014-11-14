@@ -43,7 +43,7 @@ public class Filter implements DataEngineModule, DataEngineMetaSupport {
     public Filter(){
     }
 
-    private Filter(Params params){
+    Filter(Params params){
         input = params.getFirst();
         output = params.getSecond();
         expression = ConditionExpression.deserialize(params.getThird());

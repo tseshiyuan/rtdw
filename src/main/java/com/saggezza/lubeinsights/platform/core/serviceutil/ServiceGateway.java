@@ -17,6 +17,8 @@ public class ServiceGateway {
 
     protected static ServiceGateway gateway = null;
 
+    private ServiceGateway() {}
+
     /**
      *
      * @return the singleton
@@ -47,7 +49,7 @@ public class ServiceGateway {
      * @param request
      * @return
      */
-    public ServiceResponse sendRequest(ServiceName serviceName, ServiceRequest request, String command)
+    public ServiceResponse sendRequest(ServiceName serviceName, ServiceRequest request, String endpoint)
             throws Exception {
 
         String address = ServiceCatalog.findAddress(serviceName);
@@ -72,7 +74,7 @@ public class ServiceGateway {
             exchange.setURI(uri);
             exchange.setRequestContentType("application/x-www-form-urlencoded;charset=utf-8");
             exchange.setMethod("POST");
-            String content = (command == null ? "" : "command="+command+"&") +
+            String content = (endpoint == null ? "" : "Endpoint="+endpoint+"&") +
                     ("request=" + URLEncoder.encode(request.toJson(), "UTF-8"));
             exchange.setRequestContent(new ByteArrayBuffer(content));
             httpClient.send(exchange);

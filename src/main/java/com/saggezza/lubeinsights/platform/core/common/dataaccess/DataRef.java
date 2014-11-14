@@ -20,6 +20,11 @@ public class DataRef {
         this.val = val;
     }
 
+    public DataRef(DataModel dataModel) {
+        this.dataModel = dataModel;
+        this.type = DataRefType.MODEL;
+    }
+
     public DataRef(DataRefType type, Object val, DataModel dataModel) {
         this.type = type;
         this.val = val;

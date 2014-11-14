@@ -72,6 +72,13 @@ public enum DataType {
         return TEXT;
     }
 
+    public static DataType forClass(Class<?> type){
+        if(Number.class.isAssignableFrom(type)){//TODO - extend the date time format.
+            return NUMBER;
+        }
+        return TEXT;
+    }
+
     public abstract Object deserialize(String data);
 
     public abstract String serialize(Object data);

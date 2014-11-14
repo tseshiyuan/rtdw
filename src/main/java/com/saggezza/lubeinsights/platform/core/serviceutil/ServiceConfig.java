@@ -50,8 +50,11 @@ public class ServiceConfig {
         Properties prop = new Properties();
         try {
             String confFileName = System.getProperty("service.conf");
-            //prop.load(ServiceConfig.class.getClassLoader().getResourceAsStream(configFileName));
-            prop.load(new FileInputStream(confFileName));
+            if(confFileName == null){
+                prop.load(ServiceConfig.class.getClassLoader().getResourceAsStream("service.conf"));
+            }else{
+                prop.load(new FileInputStream(confFileName));
+            }
         }
         catch (IOException ex) {
             ex.printStackTrace();

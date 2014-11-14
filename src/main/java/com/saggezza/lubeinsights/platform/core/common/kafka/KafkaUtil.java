@@ -18,6 +18,7 @@ public class KafkaUtil {
 
     public static final Logger logger = Logger.getLogger(KafkaUtil.class);
     public static final String EOB = "EndOfBatch";
+    public static final String BOB = "BeginOfBatch";
 
     protected static Properties props = loadProperties();
     public static final ZkClient zkClient = new ZkClient(props.getProperty("zookeeper.connect")); // connectionTimeout = Integer.MAX_VALUE
@@ -42,14 +43,17 @@ public class KafkaUtil {
         // Otherwise duplicate the property with the custom groupId
         Properties newProps = new Properties();
         for (String key: props.stringPropertyNames()) {
-            System.out.println("property: "+ key);
+            logger.info("property: "+ key + "=" + props.getProperty(key));
             newProps.setProperty(key, props.getProperty(key));
         }
         newProps.setProperty("group.id",groupId);
         if (forBatch) {
-            newProps.setProperty("auto.offset.reset","smallest"); // always read from top in batch mode
+            newProps.setProperty("auto.offset.reset","smallest"); // for new consumers on this topic, always read from top of the batch
             newProps.setProperty("auto.commit.enable","false");  // commit only when batch is done
         }
+        logger.info("additional KafkaConsumer config:");
+        logger.info("auto.offset.reset="+ newProps.getProperty("auto.offset.reset"));
+        logger.info("auto.commit.enable="+ newProps.getProperty("auto.commit.enable"));
         return new ConsumerConfig(newProps);
     }
 

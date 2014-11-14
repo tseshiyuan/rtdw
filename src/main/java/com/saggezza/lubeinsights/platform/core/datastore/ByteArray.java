@@ -9,7 +9,7 @@ import java.util.Arrays;
 /**
  * just a wrapper of byte[]
  */
-public class ByteArray {
+public class ByteArray implements Comparable<ByteArray> {
 
     private byte[] value;
 
@@ -26,6 +26,28 @@ public class ByteArray {
     @Override
     public final int hashCode() {
         return Arrays.hashCode(value);
+    }
+
+    @Override
+    // byte wise comparison
+    public final int compareTo(ByteArray ba) {
+        for (int i=0; i<value.length && i<ba.value.length; i++) {
+            if (value[i]<ba.value[i]) {
+                return -1;
+            }
+            else if (value[i]>ba.value[i]) {
+                return 1;
+            }
+        }
+        if (value.length < ba.value.length) {
+            return -1;
+        }
+        else if (value.length > ba.value.length) {
+            return -1;
+        }
+        else {
+            return 0;
+        }
     }
 
 }

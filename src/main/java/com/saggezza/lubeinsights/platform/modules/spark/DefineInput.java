@@ -3,6 +3,7 @@ package com.saggezza.lubeinsights.platform.modules.spark;
 import com.saggezza.lubeinsights.platform.core.common.GsonUtil;
 import com.saggezza.lubeinsights.platform.core.common.Params;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataChannel;
+import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataRefType;
 import com.saggezza.lubeinsights.platform.core.dataengine.DataEngineExecutionException;
 import com.saggezza.lubeinsights.platform.core.dataengine.DataExecutionContext;
 import com.saggezza.lubeinsights.platform.core.dataengine.DataModelExecutionContext;
@@ -35,6 +36,17 @@ public class DefineInput implements DataEngineModule, DataEngineMetaSupport{
     @Override
     public void mockExecute(ServiceRequest.ServiceStep step, DataExecutionContext context) {
         execute(step, context);//Same as execute
+        validateDataChannel(context);
+    }
+
+    private void validateDataChannel(DataExecutionContext context) {
+        DataChannel dataChannel = context.getDataChannel();
+        for(String tag : dataChannel.getTags()){
+            if(dataChannel.getDataRef(tag).getDataModel() == null
+                || dataChannel.getDataRef(tag).getType() != DataRefType.MODEL){
+                throw new RuntimeException("Data Channel should point to data models only for data model transformation. "+tag);
+            }
+        }
     }
 
 

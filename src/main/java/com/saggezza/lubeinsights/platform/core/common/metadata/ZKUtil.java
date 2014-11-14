@@ -167,6 +167,7 @@ public class ZKUtil {
         try {
             if (zk != null) {
                 zk.close();
+                zk = null;
             }
         } catch (Exception e) {
             logger.trace("ZKUtil Error", e);

@@ -6,6 +6,7 @@ import com.saggezza.lubeinsights.platform.core.common.datamodel.DataType;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.TreeMap;
 
 /**
@@ -14,7 +15,7 @@ import java.util.TreeMap;
 public class DataElementParser {
 
     public enum TokenType {
-        SYMBOL,NUMBER,DATE,COLON,LEFT_BRACKET,RIGHT_BRACKET,LEFT_CURL,RIGHT_CURL
+        SYMBOL,STRING,NUMBER,DATE,COLON,LEFT_BRACKET,RIGHT_BRACKET,LEFT_CURL,RIGHT_CURL,NULL
     };
 
     public static class Token {
@@ -30,7 +31,7 @@ public class DataElementParser {
         ArrayList<Token> al =  new ArrayList<Token>();
         String[] parts = input.split(",");
         for (String s: parts) {
-            addParts(s.trim().toCharArray(),0,al);
+            addParts(s.trim().toCharArray(), 0, al);
         }
         Token[] result = new Token[al.size()];
         System.arraycopy(al.toArray(),0,result,0,result.length);
@@ -66,19 +67,28 @@ public class DataElementParser {
                 result.add(new Token(TokenType.DATE,new String(part,startPos+1,10))); // epoch is 10 digits (to seconds)
                 addParts(part,startPos+11,result);
                 return;
+            case '#': //number
+                int i;
+                for (i=startPos+1; i<part.length && (part[i] >= '0' && part[i] <= '9' || part[i]=='.' || part[i]=='E'); i++) {}
+                result.add(new Token(TokenType.NUMBER,new String(part,startPos+1,i-startPos-1)));
+                addParts(part,i,result);
+                return;
+            case '$': //symbol
+                for (i=startPos+1; i<part.length && part[i] != '[' && part[i] != ']' && part[i] != '{' && part[i] != '}' && part[i] != ':'; i++) {}
+                result.add(new Token(TokenType.STRING,new String(part,startPos+1,i-startPos-1)));
+                addParts(part,i,result);
+                return;
+            case '?': //null
+                result.add(new Token(TokenType.NULL,null));
+                addParts(part,startPos+1,result);
+                return;
+
         }
-        if (part[startPos] >= '0' && part[startPos] <= '9') { // number
-            int i;
-            for (i=startPos; i<part.length && (part[i] >= '0' && part[i] <= '9' || part[i]=='.' || part[i]=='E'); i++) {}
-            result.add(new Token(TokenType.NUMBER,new String(part,startPos,i-startPos)));
-            addParts(part,i,result);
-        }
-        else {  // symbol
-            int i;
-            for (i=startPos; i<part.length && part[i] != '[' && part[i] != ']' && part[i] != '{' && part[i] != '}' && part[i] != ':'; i++) {}
-            result.add(new Token(TokenType.SYMBOL,new String(part,startPos,i-startPos)));
-            addParts(part,i,result);
-        }
+        // next token is a symbol
+        int i;
+        for (i=startPos; i<part.length && part[i] != '[' && part[i] != ']' && part[i] != '{' && part[i] != '}' && part[i] != ':'; i++) {}
+        result.add(new Token(TokenType.SYMBOL,new String(part,startPos,i-startPos)));
+        addParts(part,i,result);
     }
 
 
@@ -127,11 +137,20 @@ public class DataElementParser {
         if (token.type == TokenType.SYMBOL) {
             result.setToText(token.value);
         }
+        else if (token.type == TokenType.STRING) {
+            result.setToText(token.value);
+        }
         else if (token.type == TokenType.NUMBER) {
-            result.setToNumber(Float.valueOf(token.value));
+            if(token.value == null || token.value.startsWith("\"")){//TODO - Ask Chi about this specific case. Not handling strings
+                result.setToText(token.value);
+            }
+            result.setToNumber(Double.valueOf(token.value));
         }
         else if (token.type == TokenType.DATE) {
             result.setToDateTime(new Date(Long.valueOf(token.value)*1000)); // convert ms to sec
+        }
+        else if (token.type == TokenType.NULL) {
+            result.setToEmpty();
         }
         return startPos+1;
     }
@@ -151,9 +170,15 @@ public class DataElementParser {
         startPos++;
         ArrayList<DataElement> al = new ArrayList<DataElement>();
         while (startPos>=0 && startPos < input.length && input[startPos].type != TokenType.RIGHT_BRACKET) {
-            DataElement elt = new DataElement(DataType.NUMBER,0); // just a place holder
-            al.add(elt);
-            startPos = parse(input,startPos,elt);
+            if (input[startPos].type == TokenType.NULL) {
+                al.add(null);
+                startPos++;
+            }
+            else {
+                DataElement elt = new DataElement(DataType.NUMBER, 0); // just a place holder
+                al.add(elt);
+                startPos = parse(input, startPos, elt);
+            }
         }
         if (startPos < input.length && input[startPos].type == TokenType.RIGHT_BRACKET) { // succeed
             result.setToList(al);
@@ -170,7 +195,7 @@ public class DataElementParser {
             return -1;
         }
         startPos++;
-        TreeMap<String,DataElement> tm = new TreeMap<String,DataElement>();
+        LinkedHashMap<String,DataElement> tm = new LinkedHashMap<String,DataElement>();
         while (startPos < input.length && input[startPos].type != TokenType.RIGHT_CURL) {
             Pair pair = new Pair();
             startPos = parsePair(input, startPos, pair);
@@ -229,9 +254,11 @@ public class DataElementParser {
     public static final void main(String[] args) {
         try {
 
-            //String s= "[a,[1,2],d]";
-            //String s = "{a:1,b:[2,3],[x,{i:1,j:2}]}";
-            String s = "{a:^1412520517,b:[1412520517,1.41252058E9],c:[x,{i:1,j:2}]}";
+            //String s= "[$a,[#1,#2],$d]";
+            //String s = "[#1,$,?,#3]";
+            String s = "{a:#1,b:[?,#2,#3],c:$}";
+            //String s = "{a:#1,b:[$2,#3],c:[$x,{i:#1,j:#2}]}";
+            //String s = "{a:^1412520517,b:[1412520517,1.41252058E9],c:[x,{i:1,j:2}]}";
             DataElement e = parse(s);
             System.out.println(e);
 

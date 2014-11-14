@@ -24,7 +24,7 @@ public class DataElement implements Serializable {
     protected DataType dataType = null;    // primitive types: TEXT, NUMBER and DATETIME
     protected Object value = null;         // primitive values of type String, Number or DateTime
     protected ArrayList<DataElement> list = null;     // available only when this DataElement is a list
-    protected TreeMap<String,DataElement> map = null; // available only when this DataElement is a map
+    protected LinkedHashMap<String,DataElement> map = null; // available only when this DataElement is a map
     private static final String dataKey = "_d";
     private static final String valueKey = "_v";
 
@@ -80,6 +80,10 @@ public class DataElement implements Serializable {
         return map != null && !map.isEmpty();
     }
 
+    public final boolean isEmpty() {
+        return (dataType==null && value==null && list==null && map==null);
+    }
+
     public DataElement select(Selection selection){
         if(isPrimitive()){
             throw new RuntimeException("Primitive dataset. Cannot select.");
@@ -87,8 +91,8 @@ public class DataElement implements Serializable {
         return selection.from(this);
     }
 
-    public DataElement(TreeMap<String,DataElement> map) {
-        TreeMap<String, DataElement> treeMap =  new TreeMap<>();
+    public DataElement(LinkedHashMap<String,DataElement> map) {
+        LinkedHashMap<String, DataElement> treeMap =  new LinkedHashMap<>();
         treeMap.putAll(map);
         this.map = treeMap;
     }
@@ -124,6 +128,10 @@ public class DataElement implements Serializable {
         else {
             return null;
         }
+    }
+
+    public Object value(){
+        return value;
     }
 
     /**
@@ -209,7 +217,7 @@ public class DataElement implements Serializable {
             return new DataElement(al);
         }
         if (map != null) { // it's a map
-            TreeMap<String,DataElement> tm = new TreeMap<String,DataElement>();
+            LinkedHashMap<String,DataElement> tm = new LinkedHashMap<>();
             for (String k: map.keySet()) {
                 tm.put(k, map.get(k).clone());
             }
@@ -239,7 +247,7 @@ public class DataElement implements Serializable {
         map = null;
     }
 
-    public void setToMap(TreeMap<String, DataElement> map) {
+    public void setToMap(LinkedHashMap<String, DataElement> map) {
         dataType = null;
         value = null;
         list = null;
@@ -267,14 +275,35 @@ public class DataElement implements Serializable {
         map = null;
     }
 
+    public void setToEmpty() {
+        dataType=null;
+        value=null;
+        list=null;
+        map=null;
+    }
+
     /**
      * in-place update
-     * add a float to the data element value if this is a NUMBER
+     * add a double to the data element value if this is a NUMBER
      * @param value
      */
-    public final void addValue(float value) {
+    public final void addValue(double value) {
         if (dataType == DataType.NUMBER) {
-            this.value = (Float) this.value + value;
+            this.value = (Double) this.value + value;
+        }
+        // else no-op
+    }
+
+    public final void setIfLarger(double value) {
+        if (dataType == DataType.NUMBER && value > (Double) this.value) {
+            this.value = value;
+        }
+        // else no-op
+    }
+
+    public final void setIfSmaller(double value) {
+        if (dataType == DataType.NUMBER && value < (Double) this.value) {
+            this.value = value;
         }
         // else no-op
     }
@@ -284,15 +313,15 @@ public class DataElement implements Serializable {
      * @return a short representation of this data element (without type tag, comma delimited)
      */
     public final String toString() {
-        if (this == DataElement.EMPTY) {
-            return "EMPTY";
+        if (this.isEmpty()) {
+            return "?";
         }
         if(dataType != null) {
             switch (dataType) {
                 case TEXT:
-                    return (String) value;
+                    return "$"+ (String)value;
                 case NUMBER:
-                    return ((Number) value).toString();
+                    return "#"+ ((Number)value).toString();
                 case DATETIME:
                     return "^"+String.valueOf(((Date) value).getTime()/1000); // use ^ to distinguish from number
             }
@@ -300,16 +329,19 @@ public class DataElement implements Serializable {
         if (list != null) {
             StringBuilder sb = new StringBuilder("[");
             for (DataElement e: list) {
-                sb.append(e.toString()).append(",");
+                if (e==null) {
+                    sb.append("?,");  // ? means null
+                }
+                else {
+                    sb.append(e.toString()).append(",");
+                }
             }
             sb.setLength(sb.length()-1);
             sb.append("]");
             return sb.toString();
         }else if (map != null) {
             StringBuilder sb = new StringBuilder("{");
-            List<String> keys = Lists.newArrayList(map.keySet());
-            Collections.sort(keys);//To make the order consistent
-            for (String key : keys) {
+            for (String key : map.keySet()) {
                 sb.append(key).append(":").append(map.get(key).toString()).append(",");
             }
             sb.setLength(sb.length()-1);
@@ -438,7 +470,7 @@ public class DataElement implements Serializable {
             }
             return new DataElement(elems);
         }else if("map".equals(dataKey)){
-            TreeMap<String, DataElement> map = new TreeMap<>();
+            LinkedHashMap<String, DataElement> map = new LinkedHashMap<>();
             JsonObject vals = (JsonObject) valuePart;
             Set<Map.Entry<String, JsonElement>> entries = vals.entrySet();
             for(Map.Entry<String, JsonElement> each : entries){

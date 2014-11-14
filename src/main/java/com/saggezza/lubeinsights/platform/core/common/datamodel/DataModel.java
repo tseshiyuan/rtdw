@@ -24,9 +24,10 @@ import java.util.function.Function;
 public class DataModel {
 
     public static final DataModel statsDataModel = createStatsModel();
+    public static final DataModel statsDataModelCountOnly = createStatsModelCountOnly();
     protected DataType dataType = null;
     protected ArrayList<DataModel> descList = null;
-    protected TreeMap<String,DataModel> descMap = null;
+    protected LinkedHashMap<String,DataModel> descMap = null;
     protected ArrayList<String> validatorNames = null;
     protected transient ArrayList<Function<DataElement, Boolean>> validators = null;
     protected transient Function<DataElement, Boolean> typeValidator = null;
@@ -45,7 +46,7 @@ public class DataModel {
         initValidators();
     }
 
-    public DataModel(TreeMap map) {
+    public DataModel(LinkedHashMap map) {
         descMap = map;
         initValidators();
     }
@@ -68,6 +69,25 @@ public class DataModel {
     public final Map<String,DataModel> getMap() {
         return descMap;
     }
+
+
+    public final DataType typeAt(FieldAddress address) {
+        return typeAt(address.getCoordinate(),0);
+    }
+
+    private final DataType typeAt(Object[] coordinate, int startPos) {
+        if (startPos == coordinate.length) {
+            return dataType;
+        }
+        else if (coordinate[startPos] instanceof Integer) {
+            return descList.get((Integer)coordinate[startPos]).typeAt(coordinate,startPos+1);
+        }
+        else {
+            return descMap.get((String)coordinate[startPos]).typeAt(coordinate,startPos+1);
+        }
+
+    }
+
 
     /**
      * return the type for field named field
@@ -120,6 +140,9 @@ public class DataModel {
                         result.add(field+"."+cn);
                     }
                 }
+                else {
+                    result.add(field);
+                }
             }
             return result;
         }
@@ -131,6 +154,9 @@ public class DataModel {
                     for (String cn: childNames) {
                         result.add(i+"."+cn);
                     }
+                }
+                else {
+                    result.add(String.valueOf(i));
                 }
             }
             return result;
@@ -157,7 +183,7 @@ public class DataModel {
             all.add(this);
         }else if(isList()){
             all.addAll(getList());
-        }else {
+        }else if(isMap()){
             all.addAll(getMap().values());
         }
         return all;
@@ -333,11 +359,21 @@ public class DataModel {
      * @return
      */
     private static final DataModel createStatsModel() {
-        ArrayList<DataModel> al = new ArrayList<DataModel>();
+        LinkedHashMap<String, DataModel> tm = new LinkedHashMap<String, DataModel>();
         for (Stats s:Stats.values()) {
-            al.add(new DataModel(DataType.NUMBER));
+            tm.put(s.name(), new DataModel(DataType.NUMBER));
         }
-        return new DataModel(al);
+        return new DataModel(tm);
+    }
+
+    /**
+     *
+     * @return data model with only COUNT stats
+     */
+    private static final DataModel createStatsModelCountOnly() {
+        LinkedHashMap<String, DataModel> tm = new LinkedHashMap<String, DataModel>();
+        tm.put(Stats.COUNT.name(), new DataModel(DataType.NUMBER));
+        return new DataModel(tm);
     }
 
 

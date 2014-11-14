@@ -90,7 +90,7 @@ public class SparkExecutionContext extends DataExecutionContext {
             logger.debug("Parsing temporary file input "+filePath);
             inRdd = inRdd.map((Object in) -> {
                 String inText = (String) in;
-                return DataElement.parseSerialized(inText);
+                return DataElement.fromString(inText);
             });
         }else{
             inRdd = inRdd.map((Object in) -> {
@@ -103,6 +103,7 @@ public class SparkExecutionContext extends DataExecutionContext {
 
     private static JavaSparkContext context(String master){
         SparkConf simpleAPP = new SparkConf().setAppName("DataEngineApp "+ Utils.currentTime()).
+                set("spark.io.compression.codec","lzf").
                 setMaster(master);
         JavaSparkContext sc = new JavaSparkContext(simpleAPP);
         return sc;

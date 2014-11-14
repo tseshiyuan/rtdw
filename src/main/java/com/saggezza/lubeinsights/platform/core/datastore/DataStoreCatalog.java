@@ -5,6 +5,7 @@ import com.saggezza.lubeinsights.platform.core.common.metadata.ZKUtil;
 import org.apache.log4j.Logger;
 
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -50,39 +51,11 @@ public class DataStoreCatalog {
             String[] typeAndJson = DataStore.getTypeAndJson(serializedDataStore);
             return (DataStore) GsonUtil.gson().fromJson(typeAndJson[1], Class.forName(typeAndJson[0]));
         } catch (Exception e) {
-            logger.error("Cannot get data store "+ name+ " : "+e.getMessage());
-            throw new RuntimeException(e);
+            String msg = "Cannot get data store "+ name;
+            logger.error(msg);
+            throw new RuntimeException(msg,e);
         }
     }
-
-    public static final void addDeriveSpec(String tenantName, String applicationName, String fromName, String toName, DeriveSpec deriveSpec) {
-        try {
-            String path = zkPathDerive(tenantName, applicationName, fromName + "->" + toName);
-            ZKUtil.zkSet(path, deriveSpec.toJson());
-        } catch (Exception e) {
-            logger.error("Zookeeper access error: "+e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
-
-    /**
-     * get the json representation of the DeriveSpec
-     * @param tenantName
-     * @param applicationName
-     * @param tag
-     * @return
-     */
-    public static final String getDeriveSpec(String tenantName, String applicationName, String tag) {
-        try {
-            String path = zkPathDerive(tenantName, applicationName, tag);
-            String spec = ZKUtil.zkGet(path);
-            return spec;
-        } catch (Exception e) {
-            logger.error("Zookeeper access error: "+e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
-
 
     /**
      * return empty map if no data stores
@@ -111,23 +84,17 @@ public class DataStoreCatalog {
         }
     }
 
-    public static final ConcurrentHashMap<String, String> getAllDeriveSpecs(String tenantName, String applicationName) {
-        try {
-            String path = zkPathDerive(tenantName, applicationName);
-            List<String> names = ZKUtil.getChildren(path);
-            ConcurrentHashMap<String, String> result = new ConcurrentHashMap<String, String>();
-            if (names != null) {
-                for (String name : names) {
-                    result.put(name, getDeriveSpec(tenantName, applicationName, name));
-                }
-            }
-            return result;
-        } catch (Exception e) {
-            logger.error("Zookeeper access error: "+e.getMessage());
-            throw new RuntimeException(e);
-        }
-    }
 
+    public static final boolean hasDerivedStore(String tenantName, String applicationName, String name) {
+        ConcurrentHashMap<String, DataStore> stores = getDataStores(tenantName, applicationName);
+        for (Map.Entry<String,DataStore> e: stores.entrySet()) {
+            DataStore store = e.getValue();
+            if (store instanceof DerivedStore  && ((DerivedStore)store).fromName.equals(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
     private static final String zkPath(String tenantName, String applicationName, String dataStoreName) {
         return new StringBuilder("/").append(tenantName).append("/datastorecatalog/")
@@ -137,17 +104,6 @@ public class DataStoreCatalog {
 
     private static final String zkPath(String tenantName, String applicationName) {
         return new StringBuilder("/").append(tenantName).append("/datastorecatalog/")
-                .append(applicationName).toString();
-    }
-
-    private static final String zkPathDerive(String tenantName, String applicationName, String tag) {
-        return new StringBuilder("/").append(tenantName).append("/datastorecatalog-derive/")
-                .append(applicationName).append("/")
-                .append(tag).toString();
-    }
-
-    private static final String zkPathDerive(String tenantName, String applicationName) {
-        return new StringBuilder("/").append(tenantName).append("/datastorecatalog-derive/")
                 .append(applicationName).toString();
     }
 

@@ -16,6 +16,8 @@ import com.saggezza.lubeinsights.platform.core.dataengine.spark.SparkExecutionCo
 import com.saggezza.lubeinsights.platform.core.serviceutil.ServiceRequest;
 import org.apache.log4j.Logger;
 
+import java.io.Serializable;
+
 
 /**
  * @author : Albin
@@ -40,7 +42,7 @@ public class Map implements DataEngineModule, DataEngineMetaSupport {
     public Map(){
     }
 
-    private Map(Params params){
+    Map(Params params){
     }
 
     @Override

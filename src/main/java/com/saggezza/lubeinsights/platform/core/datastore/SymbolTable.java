@@ -15,24 +15,27 @@ import static com.google.common.base.Preconditions.checkNotNull;
  */
 public class SymbolTable {
 
-    private static ConcurrentHashMap<String,UnsignedInteger> hm = new ConcurrentHashMap<String,UnsignedInteger>();
-    private static UnsignedInteger counter = UnsignedInteger.ZERO;
+    //private static ConcurrentHashMap<String,UnsignedInteger> hm = new ConcurrentHashMap<String,UnsignedInteger>();
+    private static ConcurrentHashMap<String,Integer> hm = new ConcurrentHashMap<String,Integer>();
+    //private static UnsignedInteger counter = UnsignedInteger.ZERO;
+    private static int counter = 0;
 
-    public static final UnsignedInteger getId(String key) {
-        UnsignedInteger value = hm.get(key);
+    public static final Integer getId(String key) {
+        Integer value = hm.get(key);
         if (value != null) {
             return value;
         }
         return createId(key);
     }
 
-    private static synchronized UnsignedInteger createId(String key) {
+    private static synchronized Integer createId(String key) {
         if (hm.containsKey(key)) {
             return hm.get(key);
         }
-        UnsignedInteger value = counter;
-        hm.put(key,value);
-        counter = counter.plus(UnsignedInteger.ONE);
+        int value = counter;
+        hm.put(key,Integer.valueOf(value));
+        //counter = counter.plus(UnsignedInteger.ONE);
+        counter++;
         return value;
     }
 

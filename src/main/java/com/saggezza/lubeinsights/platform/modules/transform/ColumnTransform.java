@@ -8,10 +8,7 @@ import com.saggezza.lubeinsights.platform.core.dataengine.DataEngineExecutionExc
 import com.saggezza.lubeinsights.platform.core.dataengine.module.Function;
 import com.saggezza.lubeinsights.platform.core.common.modules.Modules;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 /**
  * @author : Albin
@@ -55,7 +52,7 @@ public class ColumnTransform implements Function {
         DataModel target = index == -1 ? in.getMap().get(name) : in.getList().get(index);
         DataModel returned = this.function.apply(target);
         if(index == -1){
-            TreeMap<String, DataModel> map = (TreeMap) in.getMap();
+            LinkedHashMap<String, DataModel> map = (LinkedHashMap) in.getMap();
             map.put(name, returned);
             return new DataModel(map);
         }else {

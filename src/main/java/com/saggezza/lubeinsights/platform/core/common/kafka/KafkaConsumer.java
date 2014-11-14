@@ -47,20 +47,21 @@ public class KafkaConsumer implements AutoCloseable {
             if (executor != null) {
                 executor.shutdown();
                 if (executor.awaitTermination(5, TimeUnit.SECONDS)) {
-                    logger.info("Executor tasks terminated");
+                    logger.info("KafkaConsumer's executor's tasks terminated");
                 }
                 else {
                     executor.shutdownNow();
-                    logger.info("Timed out waiting. Forced executor to shutdown");
+                    logger.info("Timed out waiting. Forced KafkaConsumer's executor to shutdown");
                 }
             }
+            logger.info("KafkaConsumer closed");
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public LinkedBlockingQueue<String> start(String topic) {
-        System.out.println("KafkaConsumer to collect data form topic "+topic);
+        System.out.println("KafkaConsumer to collect data from topic "+topic);
         LinkedBlockingQueue<String> result = new LinkedBlockingQueue<String>();
         Map<String, Integer> topicCountMap = new HashMap<String, Integer>();
         topicCountMap.put(topic, new Integer(1));
@@ -80,7 +81,12 @@ public class KafkaConsumer implements AutoCloseable {
                 while (it.hasNext()) {   // this call will block on empty stream until consumerConnector shutdown
                     // TODO: time out waiting
                     String msg = new String(it.next().message());
-                    //System.out.println("From consumer stream: " + msg);
+                    if (logger.isDebugEnabled()) {
+                        logger.debug("From consumer stream: " + msg);
+                    }
+                    if (msg.equals(KafkaUtil.EOB)) {
+                        commit(); // commit iff EOB, regardless whether in auto-commit mode or not
+                    }
                     result.offer(msg); // non-blocking insert
                 }
                 logger.info("Consumer listener loop ends");
@@ -93,16 +99,21 @@ public class KafkaConsumer implements AutoCloseable {
     public static final void main(String[] args) {
         try {
             String groupId = String.valueOf(System.currentTimeMillis());
+            groupId = "test1";
             KafkaConsumer consumer = new KafkaConsumer(groupId, true);
             //consumer.start("FileCollector.myCollector.activity-log", queue);
-            LinkedBlockingQueue<String> queue = consumer.start("mytest0");
+            LinkedBlockingQueue<String> queue = consumer.start("tenantTest_appTest_store01");
             String msg;
+            msg = queue.take();
+            System.out.println(msg);
+            /*
             while ((msg = queue.take()) != null) { // blocking call
                 System.out.println(msg);
                 if (msg.equalsIgnoreCase(KafkaUtil.EOB)) {
                     break;
                 }
             }
+            */
             consumer.commit();
             System.out.println("done");
             consumer.close();

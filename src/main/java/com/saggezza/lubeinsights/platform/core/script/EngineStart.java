@@ -2,6 +2,7 @@ package com.saggezza.lubeinsights.platform.core.script;
 
 import com.saggezza.lubeinsights.platform.core.collectionengine.CollectionEngine;
 import com.saggezza.lubeinsights.platform.core.dataengine.DataEngine;
+import com.saggezza.lubeinsights.platform.core.datastore.DataStoreManager;
 import com.saggezza.lubeinsights.platform.core.serviceutil.ServiceCatalog;
 import com.saggezza.lubeinsights.platform.core.serviceutil.ServiceConfig;
 import com.saggezza.lubeinsights.platform.core.serviceutil.ServiceName;
@@ -22,7 +23,7 @@ public class EngineStart {
     private static final String WORKFLOW_ENGINE = config.get("WORKFLOW_ENGINE_NAME");
     private static final String DATA_ENGINE = config.get("DATA_ENGINE_NAME");
     private static final String COLLECTION_ENGINE = config.get("COLLECTION_ENGINE_NAME");
-
+    private static final String DATASTORE_MANAGER = config.get("DATASTORE_MANAGER_NAME");
 
     public static void main(String[] args) {
         try{
@@ -46,6 +47,11 @@ public class EngineStart {
                 String engineLocation = config.get(ServiceName.COLLECTION_ENGINE.name());
                 int port = Integer.parseInt(engineLocation.split(":")[1]);
                 new CollectionEngine().start(port);
+            }
+            else if (command.equalsIgnoreCase(DATASTORE_MANAGER)) {
+                String engineLocation = config.get(ServiceName.DATASTORE_MANAGER.name());
+                int port = Integer.parseInt(engineLocation.split(":")[1]);
+                new DataStoreManager().start(port);
             }
             System.out.println("Engine "+command+" started");
 

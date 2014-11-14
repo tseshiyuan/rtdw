@@ -53,6 +53,10 @@ public class Params implements Serializable{
         return get(1);
     }
 
+    public Map<String, Object> asMap(){
+        return Collections.unmodifiableMap(namedValues);
+    }
+
     public boolean isNone(){
         return this == None;
     }

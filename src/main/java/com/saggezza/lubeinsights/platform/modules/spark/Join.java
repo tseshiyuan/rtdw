@@ -99,7 +99,7 @@ public class Join implements DataEngineModule, DataEngineMetaSupport{
         validate(fromKeyModel, toKeyModel);
 
         ArrayList<DataModel> models = new ArrayList<>();
-        models.addAll(fromKeyModel.getList());
+        models.addAll(fromKeyModel.allValues());
         models.addAll(from.allValues());
         models.addAll(to.allValues());
 
@@ -107,8 +107,8 @@ public class Join implements DataEngineModule, DataEngineMetaSupport{
     }
 
     private void validate(DataModel fromKeyModel, DataModel toKeyModel) throws DataEngineExecutionException {
-        ArrayList<DataModel> from = fromKeyModel.getList();
-        ArrayList<DataModel> to = toKeyModel.getList();
+        ArrayList<DataModel> from = fromKeyModel.allValues();
+        ArrayList<DataModel> to = toKeyModel.allValues();
         if(from.size() != to.size()){
             throw new DataEngineExecutionException(ErrorCode.JoinKeySizesDifferent, "Key lengths of join criteria is different");
         }

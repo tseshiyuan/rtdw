@@ -68,7 +68,7 @@ public class DataEngineTest {
     private static ArrayList<ServiceRequest.ServiceStep> serviceSteps2(final String inputTag) {
         ArrayList<ServiceRequest.ServiceStep> steps = new ArrayList<>();
 
-        steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Input, Params.of(inputTag)));
+        steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Load, Params.of(inputTag)));
 
         final String filteredFile = "filteredFile";
         steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Filter,
@@ -78,7 +78,7 @@ public class DataEngineTest {
         steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Map,
                 Params.of(filteredFile, lowerCasedOutput, "LowerCase")));
 
-        steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Output,
+        steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Publish,
                 Params.of(lowerCasedOutput)));
         return steps;
     }
@@ -97,7 +97,7 @@ public class DataEngineTest {
             steps.add(new ServiceRequest.ServiceStep(ServiceCommand.DefineInput, Params.of(in.toJson())));
         }
 
-        steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Input, Params.of(infile)));
+        steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Load, Params.of(infile)));
 
         final String filteredFile = "filteredFile";
         steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Filter,
@@ -106,7 +106,7 @@ public class DataEngineTest {
         steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Map,
                 Params.of(filteredFile, uppcasedOutput, "UpperCase")));
 
-        steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Output,
+        steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Publish,
                 Params.of(uppcasedOutput)));
         return steps;
     }
@@ -128,7 +128,7 @@ public class DataEngineTest {
         WorkFlow workFlow = new WorkFlow("workflow", nodes);
         workFlow.addLink(node1, node2);
 
-        ServiceGateway gateway = new ServiceGateway();
+        ServiceGateway gateway = ServiceGateway.getServiceGateway();
         ServiceResponse serviceResponse = gateway.sendRequest(ServiceName.WORKFLOW_ENGINE,
                 workFlow.toServiceRequest(inChannel()));
 

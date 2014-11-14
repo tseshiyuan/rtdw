@@ -15,38 +15,39 @@ import com.saggezza.lubeinsights.platform.core.dataengine.spark.DataEngineMetaSu
 import com.saggezza.lubeinsights.platform.core.dataengine.spark.DataEngineModule;
 import com.saggezza.lubeinsights.platform.core.dataengine.spark.SparkExecutionContext;
 import com.saggezza.lubeinsights.platform.core.serviceutil.ServiceRequest;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.log4j.Logger;
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
 import scala.Tuple2;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 
 /**
  * @author : Albin
- *
- * Groups by a specific key on the incoming dataset.
- * Called as,
- * <pre>
- *     {@code
- *          execute(GroupBy, inputDataSet, outputDataSet, keySelection, aggregationSelection, aggregationOperations);
- *     }
- * </pre>
- * GroupBy is the command.
- * inputDataSet is the tag/name for the input dataset.
- * outputDataSet is the tag/name for the output dataset.
- * keySelection is selection any number of columns from the data set as the key.
- * aggregationSelection is selection of any number of columns from the dataset to apply aggregation on.
- * aggregationOperations is the ordered list of aggregations to be performed on the selected columns.
+ *         <p>
+ *         Groups by a specific key on the incoming dataset.
+ *         Called as,
+ *         <pre>
+ *                                             {@code
+ *                                                  execute(GroupBy, inputDataSet, outputDataSet, keySelection, aggregationSelection, aggregationOperations);
+ *                                             }
+ *                                         </pre>
+ *         GroupBy is the command.
+ *         inputDataSet is the tag/name for the input dataset.
+ *         outputDataSet is the tag/name for the output dataset.
+ *         keySelection is selection any number of columns from the data set as the key.
+ *         aggregationSelection is selection of any number of columns from the dataset to apply aggregation on.
+ *         aggregationOperations is the ordered list of aggregations to be performed on the selected columns.
  */
 public class GroupBy implements DataEngineModule, DataEngineMetaSupport {
 
     public static final Logger logger = Logger.getLogger(GroupBy.class);
-    public GroupBy(){
+
+    public GroupBy() {
     }
 
-    private GroupBy(Params params){
+    private GroupBy(Params params) {
     }
 
     @Override
@@ -58,7 +59,7 @@ public class GroupBy implements DataEngineModule, DataEngineMetaSupport {
         Selection groupBykeySpec = params.get(2);
 
         Selection applyAggregator = params.size() > 3 ? params.get(3) : Selection.Empty;
-        Params groupByOperations = params.size() > 4 ?params.remainingFrom(4) : Params.None;
+        Params groupByOperations = params.size() > 4 ? params.remainingFrom(4) : Params.None;
 
         logger.debug(String.format("Performing group by of %s ", inputTag));
         JavaRDD<DataElement> input = context.getDataRef(inputTag);
@@ -75,9 +76,19 @@ public class GroupBy implements DataEngineModule, DataEngineMetaSupport {
             for (int i = groupBykeySpec.length(), operIndex = 0; i < r1.length(); i++, operIndex++) {
                 String aggregatorName = groupByOperations.get(operIndex);
                 Aggregator aggregator = Modules.aggregator(aggregatorName);
+                // auto conversion
+                double result1 = 0, result2 = 0;
+                String value1 = r1.valueAt(i).value().toString();
+                String value2 = r2.valueAt(i).value().toString();
+                if (StringUtils.isNotEmpty(value1)) {
+                    result1 = Double.parseDouble(value1);
+                }
+                if (StringUtils.isNotEmpty(value2)) {
+                    result2 = Double.parseDouble(value2);
+                }
                 r1.setValueAt(i,
                         new DataElement(DataType.NUMBER,
-                                aggregator.aggregate(r1.valueAt(i).asNumber(), r2.valueAt(i).asNumber())));
+                                aggregator.aggregate(result1, result2)));
             }
             return r1;
         });
@@ -93,7 +104,7 @@ public class GroupBy implements DataEngineModule, DataEngineMetaSupport {
 
     private JavaRDD<DataElement> subsetSelection(Selection groupBykeySpec, Selection applyAggregator, JavaRDD<DataElement> input) {
         return input.<DataElement>map((DataElement r) -> {
-                ArrayList<DataElement> selected = new ArrayList();
+            ArrayList<DataElement> selected = new ArrayList();
             DataElement allKeys = r.select(groupBykeySpec);
             selected.addAll(allKeys.allValues());
             DataElement aggregationColumns = r.select(applyAggregator);
@@ -115,7 +126,7 @@ public class GroupBy implements DataEngineModule, DataEngineMetaSupport {
         ArrayList<DataModel> models = new ArrayList<>();
         DataModel input = context.getDataRef(inputTag);
         models.addAll(input.select(groupBykeySpec).getList());
-        for(int i=0; i < applyAggregator.length(); i++){
+        for (int i = 0; i < applyAggregator.length(); i++) {
             models.add(new DataModel(DataType.NUMBER));
         }
 

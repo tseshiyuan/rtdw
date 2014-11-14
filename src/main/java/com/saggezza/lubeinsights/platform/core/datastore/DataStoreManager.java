@@ -4,6 +4,8 @@ package com.saggezza.lubeinsights.platform.core.datastore;
  * Created by chiyao on 9/18/14.
  */
 
+import com.saggezza.lubeinsights.platform.core.common.GsonUtil;
+import com.saggezza.lubeinsights.platform.core.common.Params;
 import com.saggezza.lubeinsights.platform.core.common.Utils;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataChannel;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataElement;
@@ -19,6 +21,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,8 +36,9 @@ public class DataStoreManager extends PlatformService {
     private static ServiceConfig config;
     private String tenantName;
     private String applicationName;
-    private StorageEngine storageEngine;  // let's just use one for now
+    private StorageEngine storageEngine;  // let's just use one for now, TODO: different data store has different storage engine
     private ConcurrentHashMap<String, DataStore> allDataStores; // for this tenant and application
+    private ConcurrentHashMap<String, DerivedStore> allDerivedStores;
 
     static {
         config = ServiceConfig.load();
@@ -55,19 +59,21 @@ public class DataStoreManager extends PlatformService {
 
         // load all data stores
         allDataStores = DataStoreCatalog.getDataStores(tenantName,applicationName);
-        // set up all derivations
-        ConcurrentHashMap<String,String> deriveSpecs = DataStoreCatalog.getAllDeriveSpecs(tenantName,applicationName);
-        for (String key: deriveSpecs.keySet()) {
-            String[] fromAndTo = key.split("->");
-            TemporalStore from = (TemporalStore)allDataStores.get(fromAndTo[0]);
-            TemporalStore to = (TemporalStore)allDataStores.get(fromAndTo[1]);
-            if (from != null && to != null) {
-                from.derive(DeriveSpec.fromJson(deriveSpecs.get(key)), to); // set up derive info in from and to
+        allDerivedStores = new ConcurrentHashMap<String,DerivedStore>();
+        // track all derived stores
+        for (Map.Entry<String,DataStore> kv: allDataStores.entrySet()) {
+            if (kv.getValue() instanceof DerivedStore) {
+                allDerivedStores.put(kv.getKey(),(DerivedStore)kv.getValue());
             }
         }
     }
 
     public DataStoreManager() {super(ServiceName.DATASTORE_MANAGER);}
+
+    public final void start(int port) throws Exception {
+        init(config);
+        super.start(port);
+    }
 
     public ServiceResponse processRequest(ServiceRequest request, String command) {
         try {
@@ -86,35 +92,73 @@ public class DataStoreManager extends PlatformService {
             ServiceRequest.ServiceStep step = steps.get(0);
 
             // command interpreter
+            Params params = step.getParams();
             ServiceResponse response = null;
             switch (step.getCommand()) {
-                case OPEN_STORE_R:
-                    // parse params
-                    String dataStoreName = (String) step.getParams().get(0);
-                    String topic = (String) step.getParams().get(1);
-                    DataStore dataStore = getDataStore(dataStoreName);
-                    dataStore.open(topic);
-                    response = new ServiceResponse("OK", null, null); // no data to transfer back
+                case NEW_STORE:
+                    DataStore newStore = newDataStore((String)params.getValue("name"),
+                            (DataModel)params.getValue("dataModel"),
+                            storageEngine,
+                            (String[])params.getValue("indexFields"),
+                            (Boolean)params.getValue("force"));
+                    if (newStore == null) {
+                        response = new ServiceResponse("OK", "Data store already exists", null);
+                    }else{
+                        response = new ServiceResponse("OK", "Data store created", null);
+                    }
                     break;
-                case CLOSE_STORE:
-                    // parse params
-                    dataStoreName = (String) step.getParams().get(0);
-                    dataStore = getDataStore(dataStoreName);
-                    dataStore.close();
-                    response = new ServiceResponse("OK", null, null); // no data to transfer back
+                case NEW_DERIVED_STORE:
+                    newDerivedStore((String)params.getValue("name"),
+                            (String)params.getValue("forName"),
+                            storageEngine,
+                            params.getValue("temporalKey"),
+                            (String[])params.getValue("groupByKeys"),
+                            (String[])params.getValue("aggFields"),
+                            (String)params.getValue("filterName"),
+                            (Boolean)params.getValue("force"));
+                    response = new ServiceResponse("OK",null,null);
+                    break;
+                case DELETE_STORE:
+                    deleteDataStore((String)params.getValue("name"));
+                    response = new ServiceResponse("OK",null,null);
+                    break;
+                case START_DERIVED_STORE:
+                    String name = (String)params.getValue("name");
+                    if (startDerivedStore(name)) {
+                        response = new ServiceResponse("OK", null, null);
+                    }
+                    else {
+                        response = new ServiceResponse("ERROR", "Cannot start derived store ", null);
+                    }
+                    break;
+                case STOP_DERIVED_STORE:
+                    name = (String)params.getValue("name");
+                    if (startDerivedStore(name)) {
+                        response = new ServiceResponse("OK", null, null);
+                    }
+                    else {
+                        response = new ServiceResponse("ERROR", "Cannot stop derived store ", null);
+                    }
+                    break;
+                case START_ALL_DERIVED_STORES:
+                    startAllDerivedStores();
+                    response = new ServiceResponse("OK", null, null);
+                    break;
+                case STOP_ALL_DERIVED_STORES:
+                    stopAllDerivedStores();
+                    response = new ServiceResponse("OK", null, null);
                     break;
 
                 default:
-                    // only support one command now
-                    response = new ServiceResponse("ERROR", "Bad command for DataStoreManager. Only OPEN_STORE and CLOSE_STORE is valid", null);
+                    response = new ServiceResponse("ERROR", "Bad command for DataStoreManager", null);
             }
             logger.info("DataStoreManager's response:\n" + response.toJson());
             return response;
         } catch (Exception e) {
+            e.printStackTrace();
             logger.trace("DataStoreManager Error", e);
             return new ServiceResponse("ERROR", e.getMessage(), null);
         }
-
 
     }
 
@@ -131,27 +175,25 @@ public class DataStoreManager extends PlatformService {
     /**
      * called from platform app
      * add a new data store to catalog
-     * This only add a new data store without new derivation info. Derivation is added by another call (deriveDataStore) from platform app
      * // TODO: create underlying representation in HBase ?
      * @param name
      * @param dataModel
      * @param storageEngine
-     * @param isTemporal
+     * @param force
      */
-    public DataStore newDataStore(String name, DataModel dataModel, StorageEngine storageEngine, String[] indexFields, boolean isTemporal, boolean force) {
+    public DataStore newDataStore(String name, DataModel dataModel, StorageEngine storageEngine, String[] indexFields, boolean force) {
+
+        System.out.println("name = "+name);
+        System.out.println("dataModel = " + dataModel.toString());
+        System.out.println("indexFields = "+ GsonUtil.gson().toJson(indexFields));
+        System.out.println("force="+force);
+
         if (allDataStores.containsKey(name) && !force) {
             logger.error("Data Store "+name+" already exits. Cannot add it.");
             return null;
         }
         else {
-            // create one and add to catalog
-            DataStore store=null;
-            if (isTemporal) {
-                store = new TemporalStore(name, dataModel, storageEngine, indexFields);
-            }
-            else {
-                store = new ReferenceStore(name, dataModel, storageEngine, indexFields);
-            }
+            DataStore store = new DataStore(name, dataModel, storageEngine, indexFields);
             // add it to catalog
             DataStoreCatalog.addDataStore(tenantName, applicationName, store);
             allDataStores.put(name, store);
@@ -159,87 +201,96 @@ public class DataStoreManager extends PlatformService {
         }
     }
 
-
     /**
-     * called from apps
-     * derive a new data store, and save it and the driveSpec to catalog
+     * called from platform app
+     * derive a new data store and add to catalog
+     * @param name
      * @param fromName
-     * @param deriveSpec
+     * @param storageEngine
+     * @param temporalKey
+     * @param groupByKeys
+     * @param aggFields
+     * @param filterName
+     * @param force
      * @return
      */
-    public TemporalStore deriveDataStore(String fromName, String toName, DeriveSpec deriveSpec) {
-        TemporalStore from = (TemporalStore) getDataStore(fromName);
-        DataModel dm = deriveSpec.deriveDataModel(from.getDataModel());
-        TemporalStore to = (TemporalStore) newDataStore(toName, dm, storageEngine, deriveSpec.getIndexFields(), true, true);
-        // set up derivation in both data stores
-        from.derive(deriveSpec,to);
-        // then add to catalog
-        DataStoreCatalog.addDeriveSpec(tenantName, applicationName, fromName, toName, deriveSpec);
-        return to;
+    public DataStore newDerivedStore(String name, String fromName, StorageEngine storageEngine,
+                                     String temporalKey, String[] groupByKeys, String[] aggFields, String filterName,
+                                     boolean force) {
+        DerivedStore store = new DerivedStore(name,fromName,storageEngine,temporalKey,groupByKeys,aggFields,filterName);
+        // add it to catalog
+        DataStoreCatalog.addDataStore(tenantName, applicationName, store);
+        allDataStores.put(name, store);
+        allDerivedStores.put(name,store);
+        return store;
     }
-
 
     /**
      * remove a data store from catalog after closing it
      * This method does not really purge the data or schema in the underlying storage engine, however.
      * @param name
      */
-    public final void removeDataStore(String name) throws IOException {
+    public final void deleteDataStore(String name) throws IOException {
         DataStore store = allDataStores.remove(name);
-        store.close();
         DataStoreCatalog.removeDataStore(tenantName, applicationName, name);
     }
 
 
     /**
-     * read from a flat file of line records as described in dataModel
-     * @param filePath
-     * @param dataModel
-     * @return
-     * @throws FileNotFoundException
-     * @throws IOException
+     * start a derived store if it exists
+     * @param name
+     * @return true if the derived store exists
      */
-    public static final ArrayList<DataElement> readFromFile(String filePath, DataModel dataModel) throws FileNotFoundException,IOException {
-        try (BufferedReader reader = new BufferedReader(new FileReader(filePath))) {
-
-            Map<String,DataModel> hm = dataModel.getMap();
-            int count = 0;
-            String[] column = new String[hm.size()];
-            DataType[] type = new DataType[hm.size()];
-            for (String key: hm.keySet()) {
-                column[count] = key;
-                type[count++] = hm.get(key).getDataType();
-            }
-            ArrayList<DataElement> result = new ArrayList<DataElement>();
-            for (String line = reader.readLine(); line != null; line = reader.readLine() ) {
-                if (line.startsWith("#") || line.isEmpty()) {
-                    continue;
-                }
-                String[] fields = line.split(",");
-                // construct data element
-                TreeMap rec = new TreeMap<String, DataElement>();
-                for (int i = 0; i < fields.length; i++) {
-                    switch (type[i]) {
-                        case TEXT:
-                            rec.put(column[i], new DataElement(DataType.TEXT, fields[i].trim()));
-                            break;
-                        case NUMBER:
-                            rec.put(column[i], new DataElement(DataType.NUMBER, Integer.valueOf(fields[i].trim())));
-                            break;
-                        case DATETIME:
-                            rec.put(column[i], new DataElement(DataType.DATETIME, Utils.CurrentDateSecond.parse(fields[i].trim())));
-                            break;
-                    }
-                }
-                result.add(new DataElement(rec));
-            }
-            return result;
-        } catch (Exception e) {
-            e.printStackTrace();
-            return null;
+    public final boolean startDerivedStore(String name) {
+        DerivedStore derivedStore = allDerivedStores.get(name);
+        if (derivedStore != null) {
+            derivedStore.start();
+            return true;
+        }
+        else {
+            return false;
         }
     }
 
+    /**
+     * stop a derived store if it exists
+     * @param name
+     * @return true if the derived store exists
+     */
+    public final boolean stopDerivedStore(String name) {
+        DerivedStore derivedStore = allDerivedStores.get(name);
+        if (derivedStore != null) {
+            derivedStore.stop();
+            return true;
+        }
+        else {
+            return false;
+        }
+    }
+
+    public void startAllDerivedStores() {
+        for (DerivedStore d: allDerivedStores.values()) {
+            try {
+                d.start();
+                logger.info("DataStoreManager starting DerivedStore "+d.name);
+            } catch (Exception e) {
+                logger.trace("Error starting DerivedStore "+d.name, e);
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void stopAllDerivedStores() {
+        for (DerivedStore d: allDerivedStores.values()) {
+            try {
+                d.stop();
+                logger.info("Stopped DerivedStore " + d.name);
+            } catch (Exception e) {
+                logger.trace("Error stopping DerivedStore "+d.name, e);
+                e.printStackTrace();
+            }
+        }
+    }
 
     public static final void main(String[] args) {
 
@@ -247,49 +298,32 @@ public class DataStoreManager extends PlatformService {
 
             DataStoreManager mgr = new DataStoreManager();
             mgr.init(config); // load all data stores and derive specs
-/*
+
             // define data mode dm1: <userName:text, gender:text, age:number, createDate:number>
-            TreeMap<String, DataModel> tm1 = new TreeMap<String, DataModel>();
+            LinkedHashMap<String, DataModel> tm1 = new LinkedHashMap<String, DataModel>();
             tm1.put("userName", new DataModel(DataType.TEXT));
             tm1.put("gender", new DataModel(DataType.TEXT));
             tm1.put("age", new DataModel(DataType.NUMBER));
             tm1.put("createDate", new DataModel((DataType.NUMBER)));
             DataModel dm1 = new DataModel(tm1);
 
-            // define data mode dm2: <gender:text, createDate:number>
+            DataStore store01 = new DataStore("store01",dm1,mgr.storageEngine,new String[]{"userName","gender"}); // indexFields
+            DataStoreCatalog.addDataStore(config.get("tenant"),config.get("application"),store01);
 
-            TreeMap<String, DataModel> tm2 = new TreeMap<String, DataModel>();
-            tm2.put("gender", new DataModel(DataType.TEXT));
-            tm2.put("createDate", new DataModel((DataType.NUMBER)));
-            tm2.put("userCount", new DataModel((DataType.NUMBER)));
-            DataModel dm2 = new DataModel(tm2);
+            DerivedStore store02 = new DerivedStore("store02","store01",mgr.storageEngine,
+                    "createDate",   // windowName
+                    new String[] {"createDate","gender"}, // groupByKeys
+                    new String[] {"age"}, // aggFields
+                    null // filterName
+            );
+            DataStoreCatalog.addDataStore(config.get("tenant"),config.get("application"),store02);
 
-            // define deriveSpec
-            String filterName = null;  // no filter
-            String aggFields = null;  // no field to aggregate
-            String aggFieldAlias = "[userCount]";
-            String groupByFields = "[gender]";
-            String temporalKeys = "[createDate]";
-            String windowFunction = null;  // don't transfer window value
-            String windowName = "createDate";
-            String[] indexFields = new String[] {"createDate","gender"};
-            DeriveSpec deriveSpec = new DeriveSpec(filterName,aggFields,aggFieldAlias,
-                    groupByFields,temporalKeys,windowFunction,windowName);
-
-            // derive data model
-            DataModel dm2 = deriveSpec.deriveDataModel(dm1);
-
-            // define store1
-            TemporalStore store1 = (TemporalStore) mgr.newDataStore("store1", dm1, mgr.storageEngine, indexFields, true, true);
-            // define store2
-            TemporalStore store2 = mgr.deriveDataStore("store1","store2",deriveSpec);
-*/
-            TemporalStore store1 = (TemporalStore)mgr.getDataStore("store1");
-            TemporalStore store2 = (TemporalStore)mgr.getDataStore("store2");
             // show them
-            System.out.println(store1.serialize());
-            System.out.println(store2.serialize());
+            System.out.println(store01.serialize());
+            System.out.println(store02.serialize());
 
+
+            store02.setupStorageEngine();
 /*
             // send elements to store1 (and propagate to store2)
             ArrayList<DataElement> al = readFromFile(args[0],store1.getDataModel());

@@ -2,13 +2,10 @@ package com.saggezza.lubeinsights.platform.core.serviceutil;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URLDecoder;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeoutException;
-import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import com.saggezza.lubeinsights.platform.core.common.metadata.ZKUtil;
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.log4j.Logger;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
@@ -30,12 +27,12 @@ public abstract class PlatformService {
     public static final Logger logger = Logger.getLogger(PlatformService.class);
     public static final int PLATFORM_SERVICE_PORT = 8080;
     public static final String Default = "default";
-    public static final String Command = "command";
+    public static final String Endpoint = "Endpoint";
     protected ServiceName name;
     protected int port;
     protected String address;
     protected AbstractHandler handler;
-    protected ServiceGateway serviceGateway = new ServiceGateway(); // client interface
+    protected ServiceGateway serviceGateway = ServiceGateway.getServiceGateway(); // client interface
     protected Server jettyServer;
 
     public PlatformService(ServiceName name) {
@@ -53,7 +50,7 @@ public abstract class PlatformService {
      * @throws InterruptedException
      * @throws Exception
      */
-    public final void start(int port) throws IOException, InterruptedException, Exception {
+    public void start(int port) throws Exception {
 
         this.port = port;
         // start the jetty server
@@ -70,7 +67,7 @@ public abstract class PlatformService {
                 try {
                     // translate to service language
                     ServiceRequest serviceRequest = HttpServletRequest2ServiceRequest(request);
-                    String command = request.getParameter(Command);
+                    String command = request.getParameter(Endpoint);
                     command = command == null ? Default : command;
                     ServiceResponse serviceResponse = processRequest(serviceRequest, command);
                     response.setContentType("text/html;charset=utf-8");
@@ -79,7 +76,11 @@ public abstract class PlatformService {
                     response.getWriter().println(serviceResponse.toJson()); // just pass on the json representation as the returned content
                 }catch (IOException | RuntimeException e){
                     logger.error(e);
-                    throw e;
+                    ServiceResponse error = new ServiceResponse("ERROR", ExceptionUtils.getStackTrace(e), null);
+                    response.setContentType("text/html;charset=utf-8");
+                    response.setStatus(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+                    baseRequest.setHandled(true);
+                    response.getWriter().println(error.toJson());
                 }
             }
         };
@@ -91,6 +92,14 @@ public abstract class PlatformService {
         // TODO: need a complete way to get host name
         // register to service catalog
         ServiceCatalog.serviceOn(name, address);
+        //Add shutdown hook
+        Runtime.getRuntime().addShutdownHook(new Thread(new Runnable() {
+            @Override
+            public void run() {
+                System.out.println("executing runtime hook");
+                ServiceCatalog.serviceOff(name);
+            }
+        }));
     }
 
     private static final String genAddress(String host, int port) {
@@ -127,7 +136,7 @@ public abstract class PlatformService {
         }
         System.out.println("jetty server done");
         ServiceCatalog.serviceOff(this.name);
-        ZKUtil.close();
+//        ZKUtil.close();
     }
 
 

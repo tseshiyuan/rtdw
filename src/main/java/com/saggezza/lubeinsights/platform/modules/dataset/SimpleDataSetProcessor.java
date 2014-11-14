@@ -40,7 +40,7 @@ public class SimpleDataSetProcessor implements DataSetModule {
                     e.printStackTrace();
                 }
                 break;
-            // don't do TABLE for now
+            // don't do STORE for now
             default:
         }
     }

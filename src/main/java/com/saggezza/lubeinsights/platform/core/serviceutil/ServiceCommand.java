@@ -14,8 +14,8 @@ public enum ServiceCommand {
 
     // DATA_ENGINE
     DefineInput(ServiceName.DATA_ENGINE),
-    Input(ServiceName.DATA_ENGINE),
-    Output(ServiceName.DATA_ENGINE),
+    Load(ServiceName.DATA_ENGINE),
+    Publish(ServiceName.DATA_ENGINE),
     PARSE(ServiceName.DATA_ENGINE),
     Map(ServiceName.DATA_ENGINE),
     Filter(ServiceName.DATA_ENGINE),
@@ -24,7 +24,7 @@ public enum ServiceCommand {
     Join(ServiceName.DATA_ENGINE),
     READ(ServiceName.DATA_ENGINE),
     Dedup(ServiceName.DATA_ENGINE),
-    WRITE(ServiceName.DATA_ENGINE),
+    Write(ServiceName.DATA_ENGINE),
 
     // COLLECTION_ENGINE
     COLLECT_BATCH(ServiceName.COLLECTION_ENGINE),
@@ -32,8 +32,13 @@ public enum ServiceCommand {
     STOP_COLLECTING_STREAM(ServiceName.COLLECTION_ENGINE),
 
     // DATASTORE_MANAGER
-    OPEN_STORE_R(ServiceName.DATASTORE_MANAGER),
-    CLOSE_STORE(ServiceName.DATASTORE_MANAGER),
+    NEW_STORE(ServiceName.DATASTORE_MANAGER),
+    NEW_DERIVED_STORE(ServiceName.DATASTORE_MANAGER),
+    START_DERIVED_STORE(ServiceName.DATASTORE_MANAGER),
+    STOP_DERIVED_STORE(ServiceName.DATASTORE_MANAGER),
+    DELETE_STORE(ServiceName.DATASTORE_MANAGER),
+    START_ALL_DERIVED_STORES(ServiceName.DATASTORE_MANAGER),
+    STOP_ALL_DERIVED_STORES(ServiceName.DATASTORE_MANAGER),
 
     // STREAM_ENGINE
     AGGREGATE(ServiceName.STREAM_ENGINE),

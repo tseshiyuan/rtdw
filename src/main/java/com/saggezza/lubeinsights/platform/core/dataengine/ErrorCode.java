@@ -11,7 +11,8 @@ public enum ErrorCode {
     ModuleNotKnown(4),
     PrimitiveDataElementNotExpected(5),
     JoinKeySizesDifferent(6),
-    JoinKeyTypeDifferent(7);
+    JoinKeyTypeDifferent(7),
+    CannotLoadDataStore(8);
     private final int errorCode;
 
     private ErrorCode(int errorCode) {

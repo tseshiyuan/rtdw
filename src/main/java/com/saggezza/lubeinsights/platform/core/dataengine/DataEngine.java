@@ -67,10 +67,10 @@ public class DataEngine extends PlatformService {
     }
 
     @Override
-    public ServiceResponse processRequest(ServiceRequest request, String command) {
-        if(Default.equals(command)){
+    public ServiceResponse processRequest(ServiceRequest request, String endpoint) {
+        if(Default.equals(endpoint)){
             return processData(request);
-        }else if(DataModel.equals(command)){
+        }else if(DataModel.equals(endpoint)){
             return processDataModel(request);
         }else {
             throw new RuntimeException("Command not supported");
@@ -91,6 +91,9 @@ public class DataEngine extends PlatformService {
         } catch (ModuleException e) {
             logger.error(e);
             return new ServiceResponse(ErrorCode.ModuleNotKnown.getErrorCode(), "Invalid module");
+        } catch (Exception e){
+            logger.error(e);
+            throw new RuntimeException(e);
         } finally {
             context.disconnect();
         }

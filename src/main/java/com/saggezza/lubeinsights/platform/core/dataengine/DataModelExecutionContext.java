@@ -3,7 +3,6 @@ package com.saggezza.lubeinsights.platform.core.dataengine;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataChannel;
 import com.saggezza.lubeinsights.platform.core.common.datamodel.DataModel;
 import com.saggezza.lubeinsights.platform.core.serviceutil.ServiceResponse;
-import org.apache.spark.api.java.JavaRDD;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -55,4 +54,5 @@ public class DataModelExecutionContext extends DataExecutionContext {
     public ServiceResponse result() {
         return new ServiceResponse("OK","OKAY", dataChannel);
     }
+
 }

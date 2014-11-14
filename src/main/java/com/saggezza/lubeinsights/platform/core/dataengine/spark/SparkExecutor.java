@@ -1,7 +1,6 @@
 package com.saggezza.lubeinsights.platform.core.dataengine.spark;
 
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataElement;
-import com.saggezza.lubeinsights.platform.core.common.modules.ModuleException;
 import com.saggezza.lubeinsights.platform.core.dataengine.*;
 import com.saggezza.lubeinsights.platform.core.common.modules.Modules;
 import com.saggezza.lubeinsights.platform.core.serviceutil.ServiceConfig;
@@ -31,7 +30,7 @@ public class SparkExecutor implements DataEngineExecutor {
         String outputPath = outpath + outConfig + System.currentTimeMillis();
         JavaRDD<DataElement> dataRef = context.getDataRef(outConfig);
         JavaRDD<String> toOutput = dataRef.map((DataElement elem) -> {
-            return elem.serialize();
+            return elem.toString();
         });
         toOutput.saveAsTextFile(outputPath);
         return outputPath;

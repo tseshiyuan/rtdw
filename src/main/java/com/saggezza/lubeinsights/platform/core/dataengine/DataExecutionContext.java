@@ -1,10 +1,12 @@
 package com.saggezza.lubeinsights.platform.core.dataengine;
 
-import com.saggezza.lubeinsights.platform.core.common.Environment;
 import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataChannel;
+import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataRef;
+import com.saggezza.lubeinsights.platform.core.common.dataaccess.DataRefType;
+import com.saggezza.lubeinsights.platform.core.datastore.DataStoreClient;
 import com.saggezza.lubeinsights.platform.core.serviceutil.ServiceResponse;
 
-import java.util.Objects;
+import java.io.IOException;
 
 /**
  * @author : Albin
@@ -27,5 +29,15 @@ public abstract class DataExecutionContext {
 
     public abstract ServiceResponse result();
 
-
+    public DataRef loadStore(String eachTag, DataRef dataRef) throws IOException {
+        if(dataRef.getType() != DataRefType.STORE){
+            throw new RuntimeException("Data Reference should be of type store to be loaded as store "+dataRef.getType());
+        }
+        DataStoreClient client = new DataStoreClient(dataRef.getValue());
+        client.open(DataStoreClient.QUERY_MODE);
+        //TODO - Figure out which data ref type to use here, whether it is store of file. If file which FS to use. file:/// or hdfs://
+        DataRef query = client.query(DataRefType.FILE, null, (String)null);
+        client.close();
+        return query;
+    }
 }

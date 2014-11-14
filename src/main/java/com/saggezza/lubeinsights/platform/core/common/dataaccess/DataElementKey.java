@@ -28,7 +28,8 @@ public class DataElementKey implements Key{
         if (o == null || getClass() != o.getClass()) return false;
 
         DataElementKey that = (DataElementKey) o;
-        if (dataElement != null ? !dataElement.toString().equals(that.dataElement.toString()) : that.dataElement != null) return false;
+//        System.out.println("[[["+dataElement.toString()+"]]][[["+that.dataElement.toString()+"]]]");
+        if (dataElement != null ? !dataElement.allValues().toString().equals(that.dataElement.allValues().toString()) : that.dataElement != null) return false;
 
         return true;
     }
@@ -36,7 +37,7 @@ public class DataElementKey implements Key{
     @Override
     public int hashCode() {
         int result = 0;
-        result = 31 * result + (dataElement != null ? dataElement.toString().hashCode() : 0);
+        result = 31 * result + (dataElement != null ? dataElement.allValues().toString().hashCode() : 0);
         return result;
     }
 }

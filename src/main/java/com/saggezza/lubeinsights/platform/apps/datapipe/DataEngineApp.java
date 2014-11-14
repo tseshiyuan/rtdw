@@ -20,7 +20,7 @@ public class DataEngineApp {
 //                asList(new ParseConfig("/Users/albin/Desktop/sample.csv",","))));
 //        steps.add(new ServiceRequest.ServiceStep(ServiceCommand.Filter,
 //                asList(new FilterConfig(0, "CK113"))));
-//        steps.add(new ServiceRequest.ServiceStep(ServiceCommand.WRITE,
+//        steps.add(new ServiceRequest.ServiceStep(ServiceCommand.WriteToStore,
 //                asList(new WriteConfig("/Users/albin/Desktop/filtered.csv", "|"))));
 
         ServiceRequest request = new ServiceRequest(steps);
